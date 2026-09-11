@@ -53,6 +53,32 @@ key falls back to `GIGI_DEV_PASSWORD`, and without that to a per-process random
 key — under which every login is lost on the next request.
 `GET /api/auth/dev-users` reports which of the three is in play.
 
+## Verifying a deploy: `GET /api/diagnostics`
+
+Open it on the deployment you just redeployed. It reports **presence, never
+values** — which variables this build can see, which deployment is answering
+(`VERCEL_ENV`, branch, commit), the resolved Google redirect URI to compare
+against Google Cloud Console, and a `warnings` array naming what is actually
+misconfigured.
+
+It exists because the two ways this goes wrong are invisible from outside: a
+variable scoped to **Production** only cannot be seen by a preview build, and a
+dashboard change never reaches a deployment that already exists. Both look
+exactly like never having set it.
+
+Lock it down or remove it before this origin serves the public site.
+
+## Getting into the app
+
+The landing page's nav has a **Log in** link (kept outside `.nav-links`, which
+is hidden under 760px, so it survives on a phone). Direct paths:
+
+| Path | What it is |
+| --- | --- |
+| `/login` | Log in. Lists the `GIGI_DEV_USERS` test accounts when they are enabled. |
+| `/app/settings` | **Connect Gmail** lives here, and on `/onboarding/connect`. |
+| `/api/diagnostics` | Configuration check for this deployment. |
+
 ## Render (recommended, and what `render.yaml` provisions)
 
 Render is the primary target: one EU region for the whole service (Frankfurt),
