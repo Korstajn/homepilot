@@ -35,8 +35,10 @@ every push and none of them are registered with Google. Set it explicitly.
 1. **APIs & Services → Library → Gmail API → Enable.**
 2. **OAuth consent screen**, User type *External*. Fill in the app name, support
    email, and the privacy policy + terms URLs.
-3. **Audience → Test users →** add the Google accounts that may connect (max
-   100). Anyone not on this list is refused, so add your testers here.
+3. **Google Auth Platform → Audience → Test users → + Add users**: the Google
+   accounts that may connect (max 100). Anyone not on this list is refused with
+   `403: access_denied`, **the project owner included** — add yourself here too.
+   Takes effect immediately; nothing to redeploy.
 4. **Credentials → Create credentials → OAuth client ID → Web application.**
    Under *Authorized redirect URIs* add exactly:
    `https://<your-domain>/api/auth/google/callback`
@@ -138,4 +140,4 @@ is offered outside a closed beta.
 | `?gmail=state` | The state cookie expired (10 min) or the callback was reached out of band. Start again. |
 | `?gmail=demo` | You are in the demo household. Log into a real account first. |
 | "Google has expired this connection" | Testing-mode 7-day refresh-token expiry. Reconnect. |
-| `access_blocked` on Google's screen | The account is not in the OAuth consent screen's test-user list. |
+| `Fel 403: access_denied` on Google's screen ("has not completed Google's verification process") | The account is not in the test-user list. Google Auth Platform → **Audience** → **Test users** → add it. Takes effect immediately, no redeploy. The project owner is not exempt — add yourself too. |
