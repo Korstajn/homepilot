@@ -14,10 +14,12 @@ import type {
   Bill,
   CalendarEvent,
   Child,
+  Currency,
   Digest,
   Feedback,
   Household,
   Identity,
+  Market,
   Member,
   MemberRole,
   ProcessingAction,
@@ -29,6 +31,7 @@ import type {
 } from './types';
 import { buildDigest } from './digest';
 import { DEFAULT_HANDED_OVER } from './handover';
+import { devCalendarToken, devIds, devPassword, devPasswordHash, devUserSpecs } from './dev-users';
 
 interface DB {
   households: Household[];
@@ -203,7 +206,103 @@ function seed(): DB {
   // empty in the demo. Uses the same append-only hashing as live events.
   seedProcessing(db, householdId);
 
+  // Test accounts from the environment. Derived, not stored, so every instance
+  // seeds the identical household — see src/lib/dev-users.ts.
+  seedDevUsers(db);
+
   return db;
+}
+
+/**
+ * Market for a brand-new household. GIGI_DEFAULT_MARKET is documented in
+ * .env.example and docs/DECISIONS.md §2 as the switch for this; before this it
+ * was read nowhere and every household was created as 'uk' regardless.
+ */
+function defaultMarket(): { market: Market; currency: Currency; timezone: string } {
+  const market: Market = process.env.GIGI_DEFAULT_MARKET?.trim().toLowerCase() === 'se' ? 'se' : 'uk';
+  return market === 'se'
+    ? { market, currency: 'SEK', timezone: 'Europe/Stockholm' }
+    : { market, currency: 'GBP', timezone: 'Europe/London' };
+}
+
+/**
+ * Seed the GIGI_DEV_USERS test accounts. Each is a plain owner of its own
+ * household with an EMPTY register — no seeded bills, no seeded calendar —
+ * because the whole point is to see what a real new household sees. The demo
+ * household keeps its rich fixtures for /api/auth/demo.
+ */
+function seedDevUsers(db: DB): void {
+  const password = devPassword();
+  if (!password) return;
+
+  for (const spec of devUserSpecs()) {
+    const { householdId, memberId, subjectId } = devIds(spec.email);
+    if (db.households.some((h) => h.id === householdId)) continue;
+
+    const { market, currency, timezone } = defaultMarket();
+
+    // forwarding_address is unique in db/schema.sql, so keep it unique here too
+    // even when two testers share a local part across different domains.
+    const local = spec.email.split('@')[0].replace(/[^a-z0-9]/gi, '.').toLowerCase();
+    let forwardingAddress = `${local}@in.getgigiapp.com`;
+    for (let n = 2; db.households.some((h) => h.forwardingAddress === forwardingAddress); n++) {
+      forwardingAddress = `${local}.${n}@in.getgigiapp.com`;
+    }
+
+    db.households.push({
+      id: householdId,
+      ownerName: spec.name,
+      email: spec.email,
+      market,
+      currency,
+      timezone,
+      adults: '2',
+      children: '1-2',
+      postcode: '',
+      forwardingAddress,
+      connectionStatus: 'pending',
+      digestTime: '07:00',
+      digestPaused: false,
+      handedOver: [...DEFAULT_HANDED_OVER],
+      // Derived so the ICS feed URL survives a restart — but from the secret
+      // dev password, never from the email or the household id, since this
+      // token alone grants read access to the calendar feed.
+      calendarToken: devCalendarToken(spec.email, password),
+      createdAt: iso(),
+    });
+
+    db.identities.push({
+      subjectId,
+      email: spec.email,
+      passwordHash: devPasswordHash(spec.email, password),
+      // No recovery code: the password comes from the environment, so the
+      // "only way back in" story does not apply to a test account.
+      createdAt: iso(),
+    });
+
+    db.members.push({
+      id: memberId,
+      householdId,
+      name: spec.name,
+      role: 'owner',
+      status: 'active',
+      subjectId,
+      createdAt: iso(),
+    });
+
+    db.digests.push(buildDigest(db.households[db.households.length - 1], [], []));
+    pushProcessing(db, {
+      householdId,
+      at: iso(),
+      action: 'account_created',
+      category: 'account',
+      actor: 'you',
+      detail: 'Your household was created from a test account',
+      purpose: 'Set up your account',
+      legalBasis: 'Contract (providing the service)',
+      region: 'EU (London)',
+    });
+  }
 }
 
 // Deterministic canonical string for the hash chain (order matters).
@@ -287,8 +386,17 @@ export function resolveInboundHousehold(recipient?: string, sender?: string): Ho
     if (byAddr) return byAddr;
   }
   if (sender) {
-    const bySender = findHouseholdByEmail(sender.replace(/.*</, '').replace(/>.*/, '').trim());
+    const addr = sender.replace(/.*</, '').replace(/>.*/, '').trim();
+    const bySender = findHouseholdByEmail(addr);
     if (bySender) return bySender;
+    // Also try the identity vault: a tester forwards from their login address,
+    // which is not necessarily the household's own `email` field.
+    const identity = findIdentityByEmail(addr);
+    const member = identity ? memberForSubject(identity.subjectId) : undefined;
+    if (member) {
+      const byMember = db.households.find((h) => h.id === member.householdId);
+      if (byMember) return byMember;
+    }
   }
   const real = db.households.filter((h) => h.id !== 'hh_demo');
   if (real.length === 1) return real[0];
@@ -312,9 +420,7 @@ export function createHousehold(input: {
     id: hid,
     ownerName: input.ownerName || 'there',
     email: input.email?.trim() ?? '',
-    market: 'uk',
-    currency: 'GBP',
-    timezone: 'Europe/London',
+    ...defaultMarket(),
     adults: '2',
     children: '1-2',
     postcode: '',

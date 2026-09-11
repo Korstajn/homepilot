@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import TabBar from './TabBar';
 import Sidebar from './Sidebar';
 import ViewToggle from './ViewToggle';
+import SessionNotice from './SessionNotice';
 
 const KEY = 'gigi_view';
 
@@ -40,7 +41,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="deskshell">
         <Sidebar view={pref} onView={choose} />
-        <main className="deskmain">{children}</main>
+        <main className="deskmain">
+          <SessionNotice />
+          {children}
+        </main>
       </div>
     );
   }
@@ -53,6 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <div className="phone">
+        <SessionNotice />
         {children}
         <TabBar />
       </div>

@@ -223,6 +223,7 @@ export type ProcessingActor =
   | 'gigi_server' // stores + analyses on our EU server
   | 'gigi_ai' // Anthropic, EU region — only when AI extraction is enabled
   | 'email_service' // inbound email provider
+  | 'google' // Gmail, when the user has connected their inbox (not EU-resident)
   | 'concierge'; // founder-assisted execution / the provider a switch goes to
 
 export type ProcessingAction =
@@ -235,6 +236,12 @@ export type ProcessingAction =
   | 'digest_generated'
   | 'shared_for_execution'
   | 'connection_changed'
+  // Gmail OAuth. Separate from 'connection_changed' (which is the
+  // forward-to-GiGi address) because granting mailbox access is a materially
+  // different act and the trust log must not blur the two.
+  | 'inbox_connected'
+  | 'inbox_disconnected'
+  | 'mailbox_searched'
   | 'handover_changed'
   | 'calendar_shared'
   | 'member_invited'

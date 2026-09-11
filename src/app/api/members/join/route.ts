@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getMemberByInvite, activateMember, createSession, displayFor, track } from '@/lib/store';
-import { hashPassword, generateRecoveryCode, hashRecovery, SESSION_COOKIE, COOKIE_OPTS } from '@/lib/auth';
+import { getMemberByInvite, activateMember, displayFor, track } from '@/lib/store';
+import { COOKIE_OPTS, SESSION_COOKIE, generateRecoveryCode, hashPassword, hashRecovery, newSessionToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +29,6 @@ export async function POST(req: Request) {
   track('member_joined', member.householdId, { role: member.role });
 
   const res = NextResponse.json({ ok: true, recoveryCode, member: { name: member.name, role: member.role } });
-  res.cookies.set(SESSION_COOKIE, createSession(member.id), COOKIE_OPTS);
+  res.cookies.set(SESSION_COOKIE, newSessionToken(member.id), COOKIE_OPTS);
   return res;
 }

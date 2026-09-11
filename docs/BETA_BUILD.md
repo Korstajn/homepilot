@@ -63,7 +63,7 @@ The build now has a real **sign-up / log-in** with sessions:
 - **Landing** (`/`) — the approved marketing page: hero, verticals, how it
   works, early results, FAQ + waitlist, final CTA and "get in touch". Both
   waitlist forms and the contact form post to our own API, not a third party.
-- **Onboarding** (`/onboarding`) — profile → connect (forward-to-GiGi, no OAuth)
+- **Onboarding** (`/onboarding`) — profile → connect (forward-to-GiGi, plus optional read-only Gmail — see [`GMAIL_OAUTH.md`](GMAIL_OAUTH.md))
   → bills-found (confirm/edit + **add manually**) → "GiGi is running".
 - **Today** (`/app/digest`) — the core surface: ≤4 items, urgency dots, approve /
   mark-done / dismiss, an **overflow** area, **minimum mode** on a quiet day, and

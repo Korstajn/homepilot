@@ -189,9 +189,11 @@ create table processing_events (
   action       text not null check (action in (
                  'account_created','email_received','analyzed_on_server','sent_to_ai',
                  'ai_returned','stored','digest_generated','shared_for_execution',
-                 'connection_changed','data_deleted')),
+                 'connection_changed','inbox_connected','inbox_disconnected',
+                 'mailbox_searched','data_deleted')),
   category     text not null check (category in ('bill','digest','account','system')),
-  actor        text not null check (actor in ('you','gigi_server','gigi_ai','email_service','concierge')),
+  actor        text not null check (actor in ('you','gigi_server','gigi_ai','email_service',
+                                            'google','concierge')),
   detail       text not null,   -- plain-language, metadata only
   purpose      text not null,   -- why it happened
   legal_basis  text not null,   -- GDPR basis in plain words
