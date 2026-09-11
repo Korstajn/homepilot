@@ -1,1 +1,5 @@
-{"cleanUrls":true,"trailingSlash":false}
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "regions": ["fra1"]
+}

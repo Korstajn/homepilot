@@ -1,0 +1,40 @@
+# Render Blueprint — dev.getgigiapp.com (GiGi development build).
+# In Render: New + → Blueprint → point at this repo → Apply.
+# https://render.com/docs/blueprint-spec
+#
+# After the first deploy, attach the custom domain:
+#   Service → Settings → Custom Domains → add `dev.getgigiapp.com`, then create
+#   the CNAME Render shows you at the getgigiapp.com registrar. The apex domain
+#   (the public marketing site) is NOT served from here.
+services:
+  - type: web
+    name: gigi-dev
+    runtime: node
+    plan: free
+    region: frankfurt # EU region — keeps "EU data only" true (docs/DECISIONS.md §4)
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/household
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: GIGI_DEFAULT_MARKET
+        value: uk
+      # The beta code testers type to open the site. Set it in the Render
+      # dashboard (sync:false keeps it out of the repo). Without it the build
+      # refuses to serve rather than falling open — see src/lib/beta.ts.
+      - key: GIGI_BETA_CODE
+        sync: false
+      # Marks this as the development deployment: robots.txt disallows all.
+      # Only GIGI_SITE_ENV=production makes a deployment indexable.
+      - key: GIGI_SITE_ENV
+        value: development
+      # Uncomment and set in the Render dashboard when you graduate off the
+      # in-memory store / add real AI extraction:
+      # - key: ANTHROPIC_API_KEY
+      #   sync: false
+      # - key: ANTHROPIC_REGION
+      #   value: eu
+      # - key: DATABASE_URL
+      #   sync: false

@@ -23,3 +23,12 @@ yarn-error.log*
 .DS_Store
 .idea/
 .vscode/
+
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo
+/.pnp
+.pnp.js
+*.pem
