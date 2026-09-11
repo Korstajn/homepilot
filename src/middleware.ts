@@ -3,8 +3,14 @@ import type { NextRequest } from 'next/server';
 import { BETA_COOKIE, gateDiagnostics, gateMode, hasValidBetaCookie } from '@/lib/beta';
 
 /**
- * Beta gate. Everything on the origin — pages AND API routes — sits behind one
- * shared code while the product is in development at dev.getgigiapp.com.
+ * Beta gate. When it is raised, everything on the origin — pages AND API
+ * routes — sits behind one shared code.
+ *
+ * It is raised only by GIGI_BETA_GATE=on (see gateMode). Unset, this
+ * middleware is a pass-through on the first line and the build serves openly,
+ * which is how it runs on its `*.vercel.app` hostnames until a real domain is
+ * attached. Being ungated does not make it indexable — robots.ts handles that
+ * separately and still disallows everything.
  *
  * Excluded from the matcher below (they must stay reachable or the gate can't
  * be opened at all): the gate screen itself, its API route, Next's static
@@ -84,8 +90,9 @@ th{color:#7A7D76;font-weight:500;white-space:nowrap}
 </style></head>
 <body><main>
 <h1>Beta gate not configured</h1>
-<p>This deployment requires a beta code, but <code>GIGI_BETA_CODE</code> is ${yes}, so it is
-refusing to serve rather than opening the build to everyone.</p>
+<p>This deployment asks for a beta gate (<code>GIGI_BETA_GATE=on</code>), but
+<code>GIGI_BETA_CODE</code> is ${yes}, so it is refusing to serve rather than opening the
+build to everyone.</p>
 <table>
 <tr><th>GIGI_BETA_CODE</th><td>${d.codeVisible ? 'visible' : '<b class="bad">not set</b>'}</td></tr>
 <tr><th>GIGI_BETA_GATE</th><td><code>${escapeHtml(d.gateOverride)}</code></td></tr>
@@ -95,6 +102,7 @@ ${d.gitRef ? `<tr><th>Branch</th><td><code>${escapeHtml(d.gitRef)}</code></td></
 </table>
 ${preview}
 ${rebuild}
-<p>To publish this deployment to everyone on purpose, set <code>GIGI_BETA_GATE=off</code> instead.</p>
+<p>Set a code to raise the gate, or remove <code>GIGI_BETA_GATE</code> to serve this
+deployment ungated on purpose.</p>
 </main></body></html>`;
 }

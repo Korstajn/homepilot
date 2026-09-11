@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
-import { gateDiagnostics } from '@/lib/beta';
+import { gateDiagnostics, gateMode, isPublicSite } from '@/lib/beta';
 import { devUserSpecs, devUsersEnabled } from '@/lib/dev-users';
-import { GMAIL_SCOPES, googleConfigured, redirectHostMismatch, redirectUri } from '@/lib/google';
+import {
+  GMAIL_SCOPES,
+  googleConfigured,
+  redirectHostMismatch,
+  redirectUri,
+  redirectUriProblem,
+} from '@/lib/google';
 import { secretSource } from '@/lib/secrets';
 
 export const dynamic = 'force-dynamic';
@@ -24,8 +30,13 @@ export const dynamic = 'force-dynamic';
  * OAuth redirect, and the redirect URI is the single value most likely to be
  * mismatched against Google Cloud Console.
  *
- * It sits behind the beta gate like everything else. Lock it down or drop it
- * before this origin ever serves the public site.
+ * It sits behind the beta gate when one is raised — but the gate is opt-in
+ * (GIGI_BETA_GATE=on), so on an ungated build this route answers anyone who
+ * has the URL. That is the trade being made while the app runs openly on its
+ * `*.vercel.app` hostnames: the value of being able to read a deployment's
+ * real configuration is worth more than the little this discloses, none of
+ * which is secret. Revisit that before this origin serves the public site —
+ * lock it down or drop it.
  */
 export async function GET(req: Request) {
   const gate = gateDiagnostics();
@@ -51,12 +62,22 @@ export async function GET(req: Request) {
     warnings.push('GIGI_DEV_PASSWORD is unset, so there are no test accounts and /login has nothing to offer. Sign-up does not persist on serverless.');
   }
 
+  if (gateMode() === 'off' && !isPublicSite()) {
+    warnings.push(
+      'This origin is ungated (GIGI_BETA_GATE is not "on"), so every page and API route here — including this one — answers anyone with the URL. robots.txt still disallows crawling, so it will not be indexed. Note that /api/auth/dev-users lists the test-account addresses and GIGI_DEV_PASSWORD is shared by all of them: while the build is open, that password is the only thing between a stranger and a test account. Set GIGI_BETA_GATE=on to gate it again.',
+    );
+  }
+
   if (!gmail) {
     warnings.push('GOOGLE_CLIENT_ID and/or GOOGLE_CLIENT_SECRET are unset, so Connect Gmail shows "Unavailable". Forwarding is unaffected.');
   } else if (redirectHostMismatch(req)) {
     const m = redirectHostMismatch(req)!;
     warnings.push(
       `GOOGLE_REDIRECT_URI points at ${m.pinned} but this deployment is served from ${m.actual}. Gmail cannot be connected from here: Google would reject it as redirect_uri_mismatch, and even if the URI were registered it would return the browser to the other host, where the state cookie does not exist. Either browse ${m.pinned}, or set GOOGLE_REDIRECT_URI for this environment to https://${m.actual}/api/auth/google/callback and register that in Google Cloud Console.`,
+    );
+  } else if (redirectUriProblem()) {
+    warnings.push(
+      `${redirectUriProblem()} Google compares the redirect URI byte for byte, so this fails as redirect_uri_mismatch however the URI is registered in Google Cloud Console.`,
     );
   } else if (!process.env.GOOGLE_REDIRECT_URI?.trim()) {
     warnings.push(
@@ -99,6 +120,7 @@ export async function GET(req: Request) {
       googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || null,
       googleRedirectUri: gmail ? redirectUri(req) : null,
       redirectUriPinned: Boolean(process.env.GOOGLE_REDIRECT_URI?.trim()),
+      redirectUriProblem: gmail ? redirectUriProblem() : null,
       hostMismatch: gmail ? redirectHostMismatch(req) : null,
       scopes: GMAIL_SCOPES,
     },

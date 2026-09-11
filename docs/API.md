@@ -4,10 +4,11 @@ All endpoints are Next.js route handlers under `src/app/api`. The build is
 single-tenant (one seeded household), so no auth header is required; production
 gates every route behind Supabase Auth and scopes to the caller's household.
 
-On a deployed build every route below also sits behind the **beta gate**
-(`src/middleware.ts`): without the `gigi_beta` cookie they answer `401` with
-`{ error: … }`. `POST /api/beta` is the only exception — it is what sets that
-cookie. Locally, with `GIGI_BETA_CODE` unset, the gate is off.
+When the **beta gate** is raised (`GIGI_BETA_GATE=on`, `src/middleware.ts`),
+every route below also sits behind it: without the `gigi_beta` cookie they
+answer `401` with `{ error: … }`. `POST /api/beta` is the only exception — it is
+what sets that cookie. The gate is opt-in and currently down, so on the dev
+deployment and locally these routes answer directly.
 
 | Method | Path                    | Purpose                                                        |
 |--------|-------------------------|----------------------------------------------------------------|

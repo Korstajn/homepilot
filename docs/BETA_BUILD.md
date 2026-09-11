@@ -25,18 +25,20 @@ npm run dev
 
 See [`DEPLOYMENT.md`](DEPLOYMENT.md). Short version: `render.yaml` is a Render
 blueprint that builds and starts the app in the EU (Frankfurt), health-checked;
-set `GIGI_BETA_CODE` in the dashboard and attach `dev.getgigiapp.com`.
+attach `dev.getgigiapp.com` and, if you want it gated, set `GIGI_BETA_GATE=on`
+plus `GIGI_BETA_CODE` in the dashboard.
 
-The only environment variable a deployment needs is the beta code.
-`.env.example` lists the ones you'll add later (Anthropic, Supabase).
+A deployment needs no environment variables to boot. `.env.example` lists the
+ones you'll add later (Anthropic, Supabase).
 
 ## The beta code
 
-The deployed dev build is gated: every path redirects to `/beta` until a visitor
-enters the shared code, which then sticks to that browser for 30 days. Locally,
-with `GIGI_BETA_CODE` unset, the gate is off and the site opens normally.
+The gate is opt-in and currently down, so the deployed dev build opens normally
+— it is reachable only at unguessable `*.vercel.app` hostnames and is `noindex`
+either way. Set `GIGI_BETA_GATE=on` and every path redirects to `/beta` until a
+visitor enters the shared code, which then sticks to that browser for 30 days.
 
-Once past the gate, a **"Beta build · Open the app →"** pill in the bottom-right
+Gated or not, a **"Beta build · Open the app →"** pill in the bottom-right
 corner of the landing page takes you into the product — the public landing
 design has no log-in link, so that pill (and typing `/login` or `/app` directly)
 is how testers get in. It never renders when the gate is off.

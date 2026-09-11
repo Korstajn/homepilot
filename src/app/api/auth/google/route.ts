@@ -9,6 +9,7 @@ import {
   openConnection,
   redirectHostMismatch,
   redirectUri,
+  redirectUriProblem,
   revokeToken,
 } from '@/lib/google';
 
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
     // the redirect URI is visible in the address bar during the OAuth hop.
     redirectUri: configured ? redirectUri(req) : null,
     hostMismatch: configured ? redirectHostMismatch(req) : null,
+    redirectUriProblem: configured ? redirectUriProblem() : null,
   });
 }
 

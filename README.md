@@ -10,15 +10,16 @@ This repo holds **both** the product spec and the running app.
 | **Run it** | `npm install && npm run dev` → http://localhost:3000 |
 | **The app** | Next.js 14, `src/` — seeded in-memory data, no API keys needed to boot. Guided tour: [docs/BETA_BUILD.md](docs/BETA_BUILD.md) |
 | **The landing design** | [docs/reference/landing-reference.html](docs/reference/landing-reference.html) — the approved design, ported 1:1 to `src/app/page.tsx` + `src/app/landing.css` |
-| **Deploying** | dev.getgigiapp.com, behind a beta code: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
+| **Deploying** | dev.getgigiapp.com, optional beta code: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 | **Why it looks like this** | [docs/MIGRATION_ANALYSIS.md](docs/MIGRATION_ANALYSIS.md) |
 | **AI contract** | [CLAUDE.md](CLAUDE.md) — the two prompts and their output contracts |
 | **Architecture & privacy** | [docs/](docs/) |
 
-The development build is **gated by a beta code**. Set `GIGI_BETA_CODE` and
-testers type it once per browser; locally, with the variable unset, the site
-opens normally. A production build with no code set refuses to serve rather
-than falling open — see `src/lib/beta.ts`.
+The development build can be **gated by a beta code**, and currently is not.
+Set `GIGI_BETA_GATE=on` to raise the gate; testers then type `GIGI_BETA_CODE`
+once per browser. Asking for the gate without setting a code refuses to serve
+rather than falling open. Either way the build is never indexable: that is
+`GIGI_SITE_ENV`, not the gate — see `src/lib/beta.ts`.
 
 ---
 

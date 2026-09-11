@@ -1,18 +1,22 @@
 import Link from 'next/link';
-import { gateMode } from '@/lib/beta';
+import { isPublicSite } from '@/lib/beta';
 
 /**
  * Dev-only way into the product.
  *
  * The reference landing (docs/reference/landing-reference.html) is the PUBLIC
  * marketing page — it has no "log in" and no demo link, and this port keeps it
- * that way, pixel for pixel. But a beta tester who just typed a code needs a
+ * that way, pixel for pixel. But a tester landing on the dev build needs a
  * door. This pill is fixed to the viewport, outside the page flow, so it adds
  * an entry point without moving a single element of the design — and it
- * disappears entirely once the gate is off (i.e. on the public site).
+ * disappears entirely on the public site.
+ *
+ * It keys off isPublicSite(), NOT the beta gate: an ungated dev deployment is
+ * exactly where testers arrive with no idea where the app lives, so that is
+ * the last place the only signpost should vanish.
  */
 export default function BetaBar() {
-  if (gateMode() === 'off') return null;
+  if (isPublicSite()) return null;
 
   return (
     <div className="beta-bar">
