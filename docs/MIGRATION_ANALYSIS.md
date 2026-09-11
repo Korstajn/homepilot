@@ -92,11 +92,14 @@ Next's static assets and `robots.txt`. No cookie ⇒ pages redirect to `/beta`
 
 ### The decisions inside it
 
-- **Fails closed.** A build with `NODE_ENV=production` and no `GIGI_BETA_CODE`
-  serves a 503 explaining itself. A forgotten variable is the most likely way
-  this gate breaks, and the failure mode of "silently publishes the dev build"
-  is much worse than "site is down until someone sets a variable". Opening the
-  site to everyone requires the explicit `GIGI_BETA_GATE=off`.
+- **Opt-in, then fails closed.** `GIGI_BETA_GATE=on` raises the gate; having
+  asked for it and set no `GIGI_BETA_CODE`, the build serves a 503 explaining
+  itself rather than falling open. (This was originally inverted — a gate by
+  default, opened by `GIGI_BETA_GATE=off`. The cost landed on the wrong side
+  once the build lived at unguessable `*.vercel.app` hostnames: every tester
+  paid a paste to keep out visitors who could not find it. Indexing, the thing
+  that actually had to stay shut, was never the gate's job — `GIGI_SITE_ENV`
+  holds that line on its own.)
 - **The cookie never holds the code.** It holds `SHA-256("gigi-beta-v1:" +
   CODE)`, recomputed per request from the configured code and compared in
   constant time.

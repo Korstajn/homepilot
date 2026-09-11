@@ -1,11 +1,18 @@
 /**
- * Beta gate — the code you must type to open the dev site.
+ * Beta gate — the code you must type to open the dev site. **Opt-in.**
  *
- * dev.getgigiapp.com is a work-in-progress build with seeded data and real
- * product copy. It is not private data, but it is not public either: nothing
- * there should be shareable, quotable or indexable by accident. A single
- * shared beta code in front of the whole origin is the smallest thing that
- * makes that true, and it costs a tester one paste.
+ * The gate exists for the day this build sits on dev.getgigiapp.com: a
+ * work-in-progress with seeded data and real product copy, not private but not
+ * public either, and nothing there should be shareable or quotable by
+ * accident. A single shared code in front of the whole origin is the smallest
+ * thing that makes that true, and it costs a tester one paste.
+ *
+ * Until then it is off. While the build is reachable only at its own
+ * `*.vercel.app` hostnames — unguessable, and `noindex` via robots.ts — a code
+ * in front of it buys nothing and costs every tester a paste. So the gate now
+ * turns on only when someone asks for it with GIGI_BETA_GATE=on; see
+ * gateMode() for what that implies. Re-gating when the domain lands is that
+ * one variable, not a code change.
  *
  * Design notes:
  *  - This module is imported by middleware (Edge runtime), so it uses Web
@@ -38,15 +45,30 @@ export function betaCode(): string | null {
 }
 
 /**
- * Deliberately fail-closed: a production deploy that forgets GIGI_BETA_CODE
- * serves a 503 rather than quietly publishing the dev build. Opening the site
- * to everyone has to be an explicit decision (GIGI_BETA_GATE=off), never an
- * omission.
+ * Gating is an explicit decision, and so is failing closed once you have made
+ * it. GIGI_BETA_GATE=on is the only thing that raises the gate — merely having
+ * a code lying around in the environment does not, so the code can stay set
+ * between gated periods without silently locking the build.
+ *
+ * Having asked for a gate and supplied no code, the build serves a 503 rather
+ * than falling open: that combination is a mistake, never an intention. An
+ * ungated origin is still not an indexable one — robots.ts keeps this build
+ * out of search results on its own (isPublicSite).
  */
 export function gateMode(): GateMode {
-  if (process.env.GIGI_BETA_GATE?.trim().toLowerCase() === 'off') return 'off';
-  if (betaCode()) return 'on';
-  return process.env.NODE_ENV === 'production' ? 'misconfigured' : 'off';
+  if (process.env.GIGI_BETA_GATE?.trim().toLowerCase() !== 'on') return 'off';
+  return betaCode() ? 'on' : 'misconfigured';
+}
+
+/**
+ * Is this deployment the real, public marketing site?
+ *
+ * Opt-IN, and deliberately independent of the beta gate: taking the gate off a
+ * dev deployment must never be what makes it crawlable, or advertise itself as
+ * finished. Only GIGI_SITE_ENV=production says "this is the public site".
+ */
+export function isPublicSite(): boolean {
+  return process.env.GIGI_SITE_ENV?.trim().toLowerCase() === 'production';
 }
 
 /**

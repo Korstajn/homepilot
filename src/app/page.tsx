@@ -9,7 +9,7 @@ import LandingNav from '@/components/landing/LandingNav';
 import Manifesto from '@/components/landing/Manifesto';
 import Proof from '@/components/landing/Proof';
 import WhatGigiDoes from '@/components/landing/WhatGigiDoes';
-import { gateMode } from '@/lib/beta';
+import { isPublicSite } from '@/lib/beta';
 import './landing.css';
 
 /**
@@ -23,7 +23,7 @@ import './landing.css';
 export default function Landing() {
   // The beta pill is fixed over the bottom-right corner; give the footer room
   // so it can never sit on top of the copyright line.
-  const betaBar = gateMode() !== 'off';
+  const betaBar = !isPublicSite();
 
   return (
     <div className={`landing${betaBar ? ' has-beta-bar' : ''}`}>

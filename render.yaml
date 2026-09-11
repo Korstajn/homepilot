@@ -21,9 +21,11 @@ services:
         value: "22"
       - key: GIGI_DEFAULT_MARKET
         value: uk
-      # The beta code testers type to open the site. Set it in the Render
-      # dashboard (sync:false keeps it out of the repo). Without it the build
-      # refuses to serve rather than falling open — see src/lib/beta.ts.
+      # The beta gate is opt-in and currently off: the build serves openly.
+      # To gate it, set GIGI_BETA_GATE=on here and GIGI_BETA_CODE in the Render
+      # dashboard (sync:false keeps the code out of the repo). Gate on with no
+      # code ⇒ the build refuses to serve rather than falling open — see
+      # src/lib/beta.ts. Indexing is a separate switch (GIGI_SITE_ENV below).
       - key: GIGI_BETA_CODE
         sync: false
       # Marks this as the development deployment: robots.txt disallows all.
