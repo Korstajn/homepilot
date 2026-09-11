@@ -49,6 +49,36 @@ export function gateMode(): GateMode {
   return process.env.NODE_ENV === 'production' ? 'misconfigured' : 'off';
 }
 
+/**
+ * What the running build can actually see, for the 503 page. Never includes the
+ * code itself — only whether one is visible, and which deployment this is.
+ *
+ * The reason this exists: the usual cause of a 503 here is that the code is
+ * set, but not for THIS deployment — a preview build cannot see a variable
+ * scoped to production only, and a dashboard change never reaches a deployment
+ * that already exists. From outside, both look identical to never having set
+ * it, so the page names the deployment rather than making you guess.
+ */
+export interface GateDiagnostics {
+  nodeEnv: string;
+  codeVisible: boolean;
+  gateOverride: string;
+  /** Vercel: production | preview | development. Empty elsewhere. */
+  vercelEnv: string;
+  /** The branch this build came from, when the host tells us. */
+  gitRef: string;
+}
+
+export function gateDiagnostics(): GateDiagnostics {
+  return {
+    nodeEnv: process.env.NODE_ENV ?? 'unknown',
+    codeVisible: Boolean(betaCode()),
+    gateOverride: process.env.GIGI_BETA_GATE?.trim() ?? '(unset)',
+    vercelEnv: process.env.VERCEL_ENV?.trim() ?? '',
+    gitRef: process.env.VERCEL_GIT_COMMIT_REF?.trim() ?? '',
+  };
+}
+
 /** Codes are compared case- and whitespace-insensitively: they get pasted around. */
 export function normalizeCode(code: string): string {
   return code.replace(/\s+/g, '').toUpperCase();
