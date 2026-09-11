@@ -104,10 +104,29 @@ connection.
 
 ## Data minimisation
 
-`/api/gmail/probe` asks Gmail for `format=metadata` with a `From`/`Subject`/`Date`
-allow-list. Message bodies are **never requested** — not fetched and filtered,
-never asked for. The search is bounded (`newer_than:60d`, excluding spam and
-trash) and the query lives in one place, `DEFAULT_GMAIL_QUERY`.
+There are two tiers, and the split is the whole design.
+
+**Searching never reads content.** `/api/gmail/probe` and `/api/gmail/search` ask
+Gmail for `format=metadata` with a `From`/`Subject`/`Date` allow-list. Message
+bodies are **never requested** on these paths — not fetched and filtered, never
+asked for. Every search is bounded in time and excludes spam and trash, composed
+through one function, `buildGmailQuery`.
+
+**Importing does read content, and says so first.** `/api/gmail/import` asks for
+`format=full` and downloads PDF attachments, because an amount and a renewal
+date are almost never in a subject line — header-only extraction under Prompt
+1's "null over guessing" rule returns a column of nulls. That is the honest
+reason the tier exists, and it is gated to match: a real session, never the demo
+household, a `manageBills` capability check, an explicit POST the user triggers
+by pressing a button, at most 12 messages per run, and **no scheduled path at
+all**. Each email opened writes a `mailbox_read` entry to the trust log,
+separately from `mailbox_searched`.
+
+`redactPII` masks emails, phone numbers, postcodes and long digit runs in body
+text before it leaves for inference. **It cannot do the same to a PDF** — the
+attachment goes to the model as-is. That is a real gap, stated rather than
+hidden, and it is the main thing to weigh before this is offered beyond a closed
+beta.
 
 Connecting, disconnecting and each inbox search are written to the household's
 trust log (`inbox_connected`, `inbox_disconnected`, `mailbox_searched`) with
@@ -130,6 +149,8 @@ is offered outside a closed beta.
 | `GET /api/auth/google` | Connection status. Never returns the token. |
 | `DELETE /api/auth/google` | Revoke at Google, clear the cookie. |
 | `GET /api/gmail/probe?max=5` | Read-only proof the grant works: subject lines only. |
+| `GET /api/gmail/search?days=30&max=25` | Search the inbox. Subject lines only; terms stay inside the bill-hunting frame. |
+| `POST /api/gmail/import` `{days}` | **Reads message content and PDF attachments** and adds unconfirmed bills. User-triggered only. |
 
 ## Troubleshooting
 

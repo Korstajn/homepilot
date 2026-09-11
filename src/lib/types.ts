@@ -130,6 +130,9 @@ export interface Bill {
   priceIncreaseFlag: boolean;
   // How the bill entered the register — matters for the accuracy story.
   source: 'extracted' | 'manual' | 'seed';
+  // The Gmail message this came from, when it came from a mailbox import. Also
+  // what stops a second import re-adding the same bill.
+  sourceRef?: string;
   confirmed: boolean;
   createdAt: string;
 }
@@ -242,6 +245,10 @@ export type ProcessingAction =
   | 'inbox_connected'
   | 'inbox_disconnected'
   | 'mailbox_searched'
+  // Reading a message's CONTENT, as opposed to searching its headers. A
+  // separate action because it is a separate act: `mailbox_searched` can
+  // honestly say "subject lines only", and this one cannot.
+  | 'mailbox_read'
   | 'handover_changed'
   | 'calendar_shared'
   | 'member_invited'

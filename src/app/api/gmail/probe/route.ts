@@ -2,14 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { currentMember } from '@/lib/auth';
 import { logProcessing, track } from '@/lib/store';
-import {
-  DEFAULT_GMAIL_QUERY,
-  GMAIL_COOKIE,
-  googleClient,
-  openConnection,
-  probeMessages,
-  refreshAccessToken,
-} from '@/lib/google';
+import { DEFAULT_GMAIL_QUERY, probeMessages } from '@/lib/google';
+import { gmailAccessToken } from '@/lib/gmail-request';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,35 +16,11 @@ export const dynamic = 'force-dynamic';
  * requested. Read-only, stores nothing.
  */
 export async function GET(req: NextRequest) {
-  const client = googleClient();
-  if (!client) {
-    return NextResponse.json({ error: 'Gmail is not configured on this deployment.' }, { status: 503 });
-  }
-
-  const conn = openConnection(req.cookies.get(GMAIL_COOKIE)?.value);
-  if (!conn) {
-    return NextResponse.json({ error: 'No Gmail inbox is connected.' }, { status: 409 });
-  }
-
-  const refreshed = await refreshAccessToken(client, conn.refreshToken);
-  if ('error' in refreshed) {
-    // invalid_grant is the expected one: in Google's Testing mode, refresh
-    // tokens for restricted scopes expire after 7 days.
-    const expired = refreshed.error === 'invalid_grant';
-    return NextResponse.json(
-      {
-        error: expired
-          ? 'Google has expired this connection — reconnect your inbox.'
-          : 'Google refused to renew the connection.',
-        reason: refreshed.error,
-        reconnect: true,
-      },
-      { status: 401 },
-    );
-  }
+  const token = await gmailAccessToken(req);
+  if (!token.ok) return token.response;
 
   const max = Math.min(Math.max(Number(req.nextUrl.searchParams.get('max') ?? 5) || 5, 1), 10);
-  const result = await probeMessages(refreshed.accessToken, DEFAULT_GMAIL_QUERY, max);
+  const result = await probeMessages(token.accessToken, DEFAULT_GMAIL_QUERY, max);
   if ('error' in result) {
     return NextResponse.json({ error: 'Gmail rejected the request.', reason: result.error }, { status: 502 });
   }

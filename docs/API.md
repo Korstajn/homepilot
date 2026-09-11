@@ -39,6 +39,8 @@ deployment and locally these routes answer directly.
 | GET    | `/api/auth/google`      | Gmail connection status. Never returns the token.             |
 | DELETE | `/api/auth/google`      | Revoke the Gmail grant at Google and clear the cookie.        |
 | GET    | `/api/gmail/probe`      | Read-only proof the grant works: `From`/`Subject`/`Date` of up to 10 bill-looking emails. Message bodies are never requested. |
+| GET    | `/api/gmail/search`     | Search the connected inbox (`days`, `max`, optional `q`). Headers only — still no message bodies. |
+| POST   | `/api/gmail/import`     | **Reads message bodies and PDF attachments** for up to 12 emails and adds them as unconfirmed bills. User-triggered; never scheduled. |
 
 ## Response conventions
 

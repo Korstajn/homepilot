@@ -2,23 +2,41 @@ import type { Bill, Household } from './types';
 import { addBill, regenerateDigest, track, logProcessing } from './store';
 import { extractBill, RawEmail } from './extraction';
 
-// Turn one forwarded email into an unconfirmed bill for a household, then
-// refresh the digest. Shared by the inbound webhook and the in-app tester.
+/**
+ * Where the email came from. The trust log must not blur the two: forwarding is
+ * the user handing us one message, a Gmail import is us reaching into their
+ * mailbox and opening one. Same extraction, materially different act.
+ */
+export type IngestSource = 'forwarded' | 'gmail';
+
+// Turn one email into an unconfirmed bill for a household, then refresh the
+// digest. Shared by the inbound webhook, the in-app tester and the Gmail import.
 //
 // Every step is recorded in the household's trust log (data flow, not content),
 // so the user can see exactly what happened with their email.
 export async function ingestEmail(
   household: Household,
   email: RawEmail,
+  source: IngestSource = 'forwarded',
+  sourceRef?: string,
 ): Promise<{ engine: string; extracted: unknown; bill: Bill }> {
   const hid = household.id;
 
-  logProcessing(
-    hid, 'email_received', 'bill', 'email_service',
-    'An email you forwarded arrived at GiGi',
-    'You asked GiGi to watch this sender',
-    'Consent',
-  );
+  if (source === 'gmail') {
+    logProcessing(
+      hid, 'mailbox_read', 'bill', 'google',
+      `GiGi opened one bill-looking email in your inbox${email.attachments?.length ? ' and its PDF attachment' : ''} to read its details`,
+      'Extract the provider, price and renewal date',
+      'Consent', 'Google (not EU-resident)',
+    );
+  } else {
+    logProcessing(
+      hid, 'email_received', 'bill', 'email_service',
+      'An email you forwarded arrived at GiGi',
+      'You asked GiGi to watch this sender',
+      'Consent',
+    );
+  }
 
   const t0 = Date.now();
   const { result, engine } = await extractBill(email);
@@ -56,6 +74,7 @@ export async function ingestEmail(
     renewalDate: result.renewalDate,
     priceIncreaseFlag: result.priceIncreaseFlag,
     source: 'extracted',
+    sourceRef,
     confirmed: false, // user confirms before monitoring — matches "null over guessing"
   });
 
@@ -67,7 +86,7 @@ export async function ingestEmail(
   );
 
   regenerateDigest(hid);
-  track('email_forwarded', hid, {
+  track(source === 'gmail' ? 'gmail_bill_imported' : 'email_forwarded', hid, {
     engine,
     type: bill.type,
     hasAmount: result.amount !== null,

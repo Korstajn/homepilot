@@ -11,22 +11,44 @@ export function aiEnabled(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
+/** A PDF handed to the model as a document block (base64, standard alphabet). */
+export interface ClaudeDocument {
+  mediaType: string;
+  data: string;
+}
+
 // Single non-streaming text call with EU inference and refusal handling.
+//
+// `documents` attaches PDFs (invoices are usually the attachment, not the
+// email). Document blocks go BEFORE the text block — the API expects the
+// material first and the instruction about it second.
 export async function claudeText(opts: {
   system: string;
   user: string;
   model: string;
   maxTokens?: number;
+  documents?: ClaudeDocument[];
 }): Promise<{ text: string; region: string }> {
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
   const client = new Anthropic();
   const region = process.env.ANTHROPIC_REGION || 'eu';
 
+  const docs = opts.documents ?? [];
+  const content = docs.length
+    ? [
+        ...docs.map((d) => ({
+          type: 'document',
+          source: { type: 'base64', media_type: d.mediaType, data: d.data },
+        })),
+        { type: 'text', text: opts.user },
+      ]
+    : opts.user;
+
   const base: Record<string, unknown> = {
     model: opts.model,
     max_tokens: opts.maxTokens ?? 1024,
     system: opts.system,
-    messages: [{ role: 'user', content: opts.user }],
+    messages: [{ role: 'user', content }],
   };
 
   async function call(withGeo: boolean) {
