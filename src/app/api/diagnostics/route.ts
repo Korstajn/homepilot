@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { gateDiagnostics } from '@/lib/beta';
 import { devUserSpecs, devUsersEnabled } from '@/lib/dev-users';
-import { GMAIL_SCOPES, googleConfigured, redirectUri } from '@/lib/google';
+import { GMAIL_SCOPES, googleConfigured, redirectHostMismatch, redirectUri } from '@/lib/google';
 import { secretSource } from '@/lib/secrets';
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +53,11 @@ export async function GET(req: Request) {
 
   if (!gmail) {
     warnings.push('GOOGLE_CLIENT_ID and/or GOOGLE_CLIENT_SECRET are unset, so Connect Gmail shows "Unavailable". Forwarding is unaffected.');
+  } else if (redirectHostMismatch(req)) {
+    const m = redirectHostMismatch(req)!;
+    warnings.push(
+      `GOOGLE_REDIRECT_URI points at ${m.pinned} but this deployment is served from ${m.actual}. Gmail cannot be connected from here: Google would reject it as redirect_uri_mismatch, and even if the URI were registered it would return the browser to the other host, where the state cookie does not exist. Either browse ${m.pinned}, or set GOOGLE_REDIRECT_URI for this environment to https://${m.actual}/api/auth/google/callback and register that in Google Cloud Console.`,
+    );
   } else if (!process.env.GOOGLE_REDIRECT_URI?.trim()) {
     warnings.push(
       'GOOGLE_REDIRECT_URI is unset, so the redirect URI is derived from each request. On Vercel every preview deployment has a different hostname and none are registered with Google, which fails as redirect_uri_mismatch. Set it explicitly.',
@@ -94,6 +99,7 @@ export async function GET(req: Request) {
       googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || null,
       googleRedirectUri: gmail ? redirectUri(req) : null,
       redirectUriPinned: Boolean(process.env.GOOGLE_REDIRECT_URI?.trim()),
+      hostMismatch: gmail ? redirectHostMismatch(req) : null,
       scopes: GMAIL_SCOPES,
     },
     ai: {

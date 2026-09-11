@@ -8,6 +8,8 @@ interface Status {
   connected: boolean;
   email: string | null;
   connectedAt: string | null;
+  redirectUri?: string | null;
+  hostMismatch?: { pinned: string; actual: string } | null;
 }
 
 interface ProbeMessage {
@@ -26,6 +28,7 @@ const NOTICE: Record<string, { text: string; ok?: boolean }> = {
   demo: { text: 'The demo household can’t connect a real inbox — log into your own account first.' },
   unconfigured: { text: 'Gmail isn’t configured on this deployment yet.' },
   no_refresh: { text: 'Google didn’t grant lasting access. Try again and approve the Gmail permission.' },
+  host_mismatch: { text: 'Gmail can’t be connected from this address — see below.' },
   exchange: { text: 'Google couldn’t complete the connection. Try again.' },
   error: { text: 'Something went wrong connecting Gmail. Try again.' },
 };
@@ -123,7 +126,29 @@ export default function GmailConnect({ next }: { next: string }) {
         </p>
       )}
 
-      {status.configured && !status.connected && (
+      {/*
+        A pinned redirect URI on another host cannot work from here. Say so
+        with both hostnames instead of letting Google answer with a bare
+        redirect_uri_mismatch 400 on a page we never see.
+      */}
+      {status.hostMismatch && (
+        <div style={{ background: 'var(--surface-2)', padding: '12px 14px', borderRadius: 12 }}>
+          <div className="small" style={{ fontWeight: 600, color: 'var(--danger)' }}>
+            Wrong address for Gmail
+          </div>
+          <p className="tiny muted" style={{ margin: '4px 0 0' }}>
+            GOOGLE_REDIRECT_URI points at <strong>{status.hostMismatch.pinned}</strong>, but you
+            are on <strong>{status.hostMismatch.actual}</strong>. Google would send you back to
+            the wrong host, so the connection is refused before it starts.
+          </p>
+          <p className="tiny muted" style={{ margin: '6px 0 0' }}>
+            Either open GiGi on {status.hostMismatch.pinned}, or point
+            GOOGLE_REDIRECT_URI at this host and register it in Google Cloud Console.
+          </p>
+        </div>
+      )}
+
+      {status.configured && !status.connected && !status.hostMismatch && (
         <>
           <p className="small" style={{ margin: 0 }}>
             Instead of forwarding each email, you can let GiGi look for bills itself.
@@ -137,6 +162,11 @@ export default function GmailConnect({ next }: { next: string }) {
             Google will show an “unverified app” warning while GiGi is in beta. Your Gmail
             permission is stored in your browser, not on our servers.
           </p>
+          {status.redirectUri && (
+            <p className="tiny muted" style={{ margin: 0 }}>
+              Redirect URI Google must have registered: <code>{status.redirectUri}</code>
+            </p>
+          )}
         </>
       )}
 

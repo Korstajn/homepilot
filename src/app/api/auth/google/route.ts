@@ -7,6 +7,8 @@ import {
   GMAIL_SCOPES,
   googleConfigured,
   openConnection,
+  redirectHostMismatch,
+  redirectUri,
   revokeToken,
 } from '@/lib/google';
 
@@ -15,12 +17,18 @@ export const dynamic = 'force-dynamic';
 // Connection status for the UI. Never returns the token itself.
 export async function GET(req: NextRequest) {
   const conn = openConnection(req.cookies.get(GMAIL_COOKIE)?.value);
+  const configured = googleConfigured();
   return NextResponse.json({
-    configured: googleConfigured(),
+    configured,
     connected: conn !== null,
     email: conn?.email ?? null,
     connectedAt: conn?.connectedAt ?? null,
     scopes: GMAIL_SCOPES,
+    // The exact string Google must have registered, and whether it can
+    // possibly work from the host currently being browsed. Neither is secret:
+    // the redirect URI is visible in the address bar during the OAuth hop.
+    redirectUri: configured ? redirectUri(req) : null,
+    hostMismatch: configured ? redirectHostMismatch(req) : null,
   });
 }
 

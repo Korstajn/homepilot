@@ -7,6 +7,7 @@ import {
   OAUTH_STATE_COOKIE_OPTS,
   authUrl,
   googleClient,
+  redirectHostMismatch,
   redirectUri,
 } from '@/lib/google';
 import { nonce, seal } from '@/lib/secrets';
@@ -41,6 +42,11 @@ export async function GET(req: Request) {
     return NextResponse.redirect(login);
   }
   if (member.householdId === getDefaultHousehold().id) return back('demo');
+
+  // Stop here rather than bouncing the user off Google's error page: a pinned
+  // redirect URI on another host cannot succeed, and Google's 400 never comes
+  // back to us to be explained.
+  if (redirectHostMismatch(req)) return back('host_mismatch');
 
   const state = nonce();
   track('gmail_connect_started', member.householdId, {});

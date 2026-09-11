@@ -93,6 +93,36 @@ export function redirectUri(req: Request): string {
   return `${proto}://${host}/api/auth/google/callback`;
 }
 
+/**
+ * Detect the one misconfiguration that is guaranteed to fail, before we send
+ * the user to Google: GOOGLE_REDIRECT_URI pinned to a different host than the
+ * one being browsed.
+ *
+ * This is not a theoretical case — it is what happens the moment you pin the
+ * variable to production and then open a preview deployment. Google rejects it
+ * with a bare `redirect_uri_mismatch` 400 on its own error page, which never
+ * comes back to us, so the app cannot explain what went wrong. Even if the URI
+ * *were* registered it would still break: Google would return the browser to
+ * the other host, where the state cookie does not exist.
+ *
+ * Returns the two hosts when they disagree, so the caller can say so plainly.
+ */
+export function redirectHostMismatch(req: Request): { pinned: string; actual: string } | null {
+  const configured = process.env.GOOGLE_REDIRECT_URI?.trim();
+  if (!configured) return null; // derived from the request — cannot disagree
+  try {
+    const pinned = new URL(configured);
+    const url = new URL(req.url);
+    const proto = req.headers.get('x-forwarded-proto') ?? url.protocol.replace(':', '');
+    const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? url.host;
+    const actual = new URL(`${proto}://${host}`);
+    if (pinned.host === actual.host) return null;
+    return { pinned: pinned.host, actual: actual.host };
+  } catch {
+    return null;
+  }
+}
+
 export function authUrl(opts: { client: GoogleClient; redirectUri: string; state: string; loginHint?: string }): string {
   const params = new URLSearchParams({
     client_id: opts.client.clientId,
