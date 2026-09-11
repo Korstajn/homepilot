@@ -10,6 +10,7 @@ interface Status {
   connectedAt: string | null;
   redirectUri?: string | null;
   hostMismatch?: { pinned: string; actual: string } | null;
+  redirectUriProblem?: string | null;
 }
 
 interface ProbeMessage {
@@ -38,6 +39,7 @@ export default function GmailConnect({ next }: { next: string }) {
   const [notice, setNotice] = useState<{ text: string; ok?: boolean } | null>(null);
   const [probe, setProbe] = useState<{ total: number | null; messages: ProbeMessage[] } | null>(null);
   const [probeError, setProbeError] = useState('');
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -61,6 +63,21 @@ export default function GmailConnect({ next }: { next: string }) {
       window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : ''));
     }
   }, [load]);
+
+  // Typing this string by hand is how it ends up mismatched, and a phone is
+  // the worst place to select it out of a paragraph. Clipboard writes reject
+  // outside a secure context, so failure leaves the visible string as the
+  // fallback rather than claiming a copy that did not happen.
+  async function copyRedirectUri() {
+    if (!status?.redirectUri) return;
+    try {
+      await navigator.clipboard.writeText(status.redirectUri);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   function connect() {
     trackClient('gmail_connect_clicked');
@@ -148,6 +165,20 @@ export default function GmailConnect({ next }: { next: string }) {
         </div>
       )}
 
+      {/*
+        A pinned URI that is malformed fails byte-for-byte at Google however it
+        is registered there, so name the defect rather than leaving another
+        bare 400 to be interpreted.
+      */}
+      {status.redirectUriProblem && (
+        <div style={{ background: 'var(--surface-2)', padding: '12px 14px', borderRadius: 12 }}>
+          <div className="small" style={{ fontWeight: 600, color: 'var(--danger)' }}>
+            The redirect URI cannot match
+          </div>
+          <p className="tiny muted" style={{ margin: '4px 0 0' }}>{status.redirectUriProblem}</p>
+        </div>
+      )}
+
       {status.configured && !status.connected && !status.hostMismatch && (
         <>
           <p className="small" style={{ margin: 0 }}>
@@ -163,9 +194,22 @@ export default function GmailConnect({ next }: { next: string }) {
             permission is stored in your browser, not on our servers.
           </p>
           {status.redirectUri && (
-            <p className="tiny muted" style={{ margin: 0 }}>
-              Redirect URI Google must have registered: <code>{status.redirectUri}</code>
-            </p>
+            <div style={{ background: 'var(--surface-2)', padding: '10px 12px', borderRadius: 12 }}>
+              <p className="tiny muted" style={{ margin: 0 }}>
+                Google Cloud Console → Credentials → your OAuth client →{' '}
+                <strong>Authorized redirect URIs</strong> (not JavaScript origins) must contain
+                exactly this, or Google answers <code>redirect_uri_mismatch</code>:
+              </p>
+              <code
+                className="tiny"
+                style={{ display: 'block', wordBreak: 'break-all', margin: '6px 0' }}
+              >
+                {status.redirectUri}
+              </code>
+              <button className="btn btn-subtle btn-sm" onClick={copyRedirectUri}>
+                {copied ? 'Copied ✓' : 'Copy'}
+              </button>
+            </div>
           )}
         </>
       )}

@@ -83,6 +83,8 @@ export function googleConfigured(): boolean {
  * a preview deployment has a different hostname on every push, and none of them
  * will be registered, so guessing from the request would fail confusingly.
  */
+export const CALLBACK_PATH = '/api/auth/google/callback';
+
 export function redirectUri(req: Request): string {
   const configured = process.env.GOOGLE_REDIRECT_URI?.trim();
   if (configured) return configured;
@@ -90,7 +92,46 @@ export function redirectUri(req: Request): string {
   const url = new URL(req.url);
   const proto = req.headers.get('x-forwarded-proto') ?? url.protocol.replace(':', '');
   const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? url.host;
-  return `${proto}://${host}/api/auth/google/callback`;
+  return `${proto}://${host}${CALLBACK_PATH}`;
+}
+
+/**
+ * A pinned GOOGLE_REDIRECT_URI that cannot match Google Cloud Console whatever
+ * is registered there.
+ *
+ * Google compares the redirect URI byte for byte, and every way of getting it
+ * subtly wrong looks right at a glance: a trailing slash, http:// on a
+ * deployed host, a stray `?next=` left on the end, the callback path mistyped.
+ * All of them fail identically — a bare `redirect_uri_mismatch` 400 on
+ * Google's own page, which never comes back to us — so the string is worth
+ * checking here, where the problem can be named instead of guessed at.
+ *
+ * Shape only. Whether the URI is REGISTERED is Google's to say, and a null
+ * here is not a promise that connecting will work.
+ */
+export function redirectUriProblem(): string | null {
+  const configured = process.env.GOOGLE_REDIRECT_URI?.trim();
+  if (!configured) return null;
+
+  let url: URL;
+  try {
+    url = new URL(configured);
+  } catch {
+    return `GOOGLE_REDIRECT_URI is not a URL. It must read https://<host>${CALLBACK_PATH}`;
+  }
+  if (url.protocol !== 'https:' && url.hostname !== 'localhost') {
+    return `GOOGLE_REDIRECT_URI starts with ${url.protocol}// — Google accepts http only for localhost.`;
+  }
+  if (url.search || url.hash) {
+    return 'GOOGLE_REDIRECT_URI has a query string or # fragment on the end. Google matches the whole string, so it must be the bare callback URL.';
+  }
+  if (url.pathname !== CALLBACK_PATH) {
+    const slash = url.pathname === `${CALLBACK_PATH}/`;
+    return slash
+      ? `GOOGLE_REDIRECT_URI ends with a trailing slash. That alone is enough to fail — drop it, leaving ${CALLBACK_PATH}`
+      : `GOOGLE_REDIRECT_URI ends in "${url.pathname}", but this app's callback is "${CALLBACK_PATH}".`;
+  }
+  return null;
 }
 
 /**
