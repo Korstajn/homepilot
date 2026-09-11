@@ -1,0 +1,508 @@
+/* =========================================================================
+   GiGi design tokens
+   Calm, warm, premium — tuned for the ICP (women 30+, "signal over noise").
+   Everything visual keys off these variables, so reskinning to the real
+   brand/design once the design image lands is a single-file change.
+   ========================================================================= */
+:root {
+  --paper: #f1ede4;        /* warm cream ground */
+  --surface: #ffffff;
+  --surface-2: #f3eee5;
+  --ink: #1c1b19;          /* near-black */
+  --ink-soft: #4c4842;
+  --muted: #8f897d;
+  --border: #e5ddcf;
+  --border-strong: #d9cfbd;
+  --dot: rgba(28, 27, 25, 0.07); /* dot-grid */
+
+  --black: #1c1b19;        /* primary marketing CTA */
+  --black-ink: #000000;
+
+  --brand: #3c5a47;        /* deep sage — GiGi's voice / approve actions */
+  --brand-ink: #2c4636;
+  --brand-soft: #e5ede7;
+
+  --accent: #9a6b3f;       /* muted bronze — savings / value */
+  --accent-soft: #f1e7da;
+
+  --today: #c4573b;        /* urgency: today */
+  --soon: #c89a3e;         /* urgency: soon */
+  --upcoming: #6e8b7e;     /* urgency: upcoming */
+
+  --danger: #b23b30;
+  --ok: #3c5a47;
+
+  --shadow: 0 1px 2px rgba(38, 34, 30, 0.04), 0 8px 24px rgba(38, 34, 30, 0.06);
+  --shadow-sm: 0 1px 2px rgba(38, 34, 30, 0.06);
+  --radius: 18px;
+  --radius-sm: 12px;
+
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia,
+    'Times New Roman', serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  padding: 0;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* --- Phone frame: the product is mobile-only, so we present it as a phone --- */
+.viewport {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #fff7ee 0%, var(--paper) 60%);
+}
+.phone {
+  width: 100%;
+  max-width: 440px;
+  min-height: min(880px, calc(100dvh - 48px));
+  background: var(--surface);
+  border-radius: 34px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+@media (max-width: 480px) {
+  .viewport { padding: 0; }
+  .phone { border-radius: 0; min-height: 100dvh; border: none; box-shadow: none; }
+}
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 20px 96px;
+}
+.screen.pad-bottom-sm { padding-bottom: 28px; }
+
+/* --- Typography --- */
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
+h1 { font-size: 26px; line-height: 1.15; margin: 0 0 6px; }
+h2 { font-size: 20px; line-height: 1.2; margin: 0 0 8px; }
+h3 { font-size: 16px; margin: 0 0 4px; }
+p { line-height: 1.5; color: var(--ink-soft); margin: 0 0 12px; }
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.tiny { font-size: 12px; }
+
+/* --- Cards --- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.card + .card { margin-top: 12px; }
+.stack > * + * { margin-top: 12px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.row.between { justify-content: space-between; }
+.spacer { flex: 1; }
+
+/* --- Buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: transform 0.05s ease, background 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-ink); }
+.btn-black { background: var(--black); color: #fff; }
+.btn-black:hover { background: var(--black-ink); }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--border-strong); }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn-subtle { background: var(--surface-2); color: var(--ink); }
+.btn-sm { padding: 9px 14px; font-size: 13px; width: auto; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+.pill.brand { background: var(--brand-soft); color: var(--brand-ink); }
+.pill.accent { background: var(--accent-soft); color: var(--accent); }
+
+/* --- Urgency dot --- */
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.dot.today { background: var(--today); }
+.dot.soon { background: var(--soon); }
+.dot.upcoming { background: var(--upcoming); }
+
+/* --- Inputs --- */
+label.field { display: block; margin-bottom: 14px; }
+label.field > span { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+input, select, textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-family: var(--font-body);
+  background: var(--surface);
+  color: var(--ink);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+textarea { min-height: 92px; resize: vertical; }
+
+/* --- Choice chips (tap-to-select) --- */
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.choice.selected { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+/* --- Bottom nav --- */
+.tabbar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+}
+.tabbar a {
+  flex: 1;
+  text-align: center;
+  padding: 6px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.tabbar a.active { color: var(--brand); }
+.tabbar .glyph { font-size: 18px; line-height: 1; }
+
+/* --- Misc --- */
+.divider { height: 1px; background: var(--border); margin: 16px 0; border: none; }
+.badge-cat { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.banner {
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.banner.warn { background: #fbeee6; color: #8a4a2a; border: 1px solid #f0d8c6; }
+.banner.ok { background: var(--brand-soft); color: var(--brand-ink); border: 1px solid #d7e6dd; }
+.center { text-align: center; }
+.grow { flex: 1; }
+.value-hero { font-family: var(--font-display); font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
+.link { color: var(--brand); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.toast {
+  position: absolute; left: 16px; right: 16px; bottom: 84px;
+  background: var(--ink); color: #fff; border-radius: var(--radius-sm);
+  padding: 12px 16px; font-size: 14px; font-weight: 500;
+  box-shadow: var(--shadow); animation: rise 0.2s ease;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+
+
+/* --- Wordmark (shared: app sidebar, auth screens, landing) --- */
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--black); color: #fff;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 600; font-size: 18px;
+}
+.logo-word { font-family: var(--font-display); font-weight: 600; font-size: 22px; letter-spacing: -0.02em; }
+
+/* --- Command bar (ambient voice + text input) --- */
+.cmdbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 6px 8px 6px 6px;
+  box-shadow: var(--shadow-sm);
+}
+.cmd-mic {
+  width: 38px; height: 38px; flex: none;
+  border-radius: 50%; border: none; cursor: pointer;
+  color: #fff; font-size: 17px; display: grid; place-items: center;
+  transition: background .2s ease, transform .1s ease;
+}
+.cmd-mic:active { transform: scale(0.94); }
+.cmd-mic:disabled { opacity: .5; cursor: default; }
+.cmd-input {
+  flex: 1; border: none; background: transparent; padding: 6px 4px;
+  font-size: 15px; color: var(--ink); box-shadow: none !important;
+}
+.cmd-input:focus { outline: none; }
+
+/* --- Screen header (eyebrow + serif title + avatar) --- */
+.screen-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.avatar-btn {
+  width: 40px; height: 40px; flex: none; border-radius: 50%;
+  background: var(--ink); color: #fff; display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; text-decoration: none;
+}
+
+/* --- Mini stat tiles (impact row) --- */
+.mini-stat {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px; text-align: center;
+}
+.mini-stat b { display: block; font-size: 16px; font-family: var(--font-display); }
+.mini-stat span { font-size: 10px; color: var(--muted); }
+
+/* --- Timeline (kids & travel) --- */
+.timeline { position: relative; padding-left: 22px; }
+.timeline::before { content: ''; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: var(--border); }
+.tl-item { position: relative; margin-bottom: 14px; }
+.tl-dot { position: absolute; left: -22px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--brand); border: 2px solid var(--surface); }
+.tl-time { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+
+/* =========================================================================
+   MOTION SYSTEM — smooth entrances, micro-interactions, spring-ish easing.
+   Everything degrades to instant under prefers-reduced-motion.
+   ========================================================================= */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 420ms;
+}
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes popIn { 0% { opacity: 0; transform: scale(0.9); } 60% { transform: scale(1.03); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes slideOutRight { to { opacity: 0; transform: translateX(40px); height: 0; margin: 0; padding: 0; } }
+@keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+@keyframes pulseRing {
+  0% { box-shadow: 0 0 0 0 rgba(196, 87, 59, 0.45); }
+  70% { box-shadow: 0 0 0 12px rgba(196, 87, 59, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(196, 87, 59, 0); }
+}
+@keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+/* Page-enter: the .screen content rises in, with a gentle stagger per block. */
+.screen > * { animation: fadeInUp var(--dur) var(--ease-out) both; }
+.screen > *:nth-child(1) { animation-delay: 0ms; }
+.screen > *:nth-child(2) { animation-delay: 40ms; }
+.screen > *:nth-child(3) { animation-delay: 80ms; }
+.screen > *:nth-child(4) { animation-delay: 120ms; }
+.screen > *:nth-child(5) { animation-delay: 160ms; }
+.screen > *:nth-child(6) { animation-delay: 190ms; }
+.screen > *:nth-child(7) { animation-delay: 215ms; }
+.screen > *:nth-child(8) { animation-delay: 235ms; }
+.screen > *:nth-child(n+9) { animation-delay: 250ms; }
+/* Fixed overlays inside a screen shouldn't fly in. */
+.screen > .toast { animation: rise var(--dur) var(--ease-spring); }
+
+/* Cards inside a .stack cascade in too (used within a screen block). */
+.stack.reveal > * { animation: fadeInUp var(--dur) var(--ease-out) both; }
+.stack.reveal > *:nth-child(2) { animation-delay: 50ms; }
+.stack.reveal > *:nth-child(3) { animation-delay: 100ms; }
+.stack.reveal > *:nth-child(4) { animation-delay: 150ms; }
+.stack.reveal > *:nth-child(n+5) { animation-delay: 190ms; }
+
+/* Micro-interactions ------------------------------------------------------- */
+.card { transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out); }
+a.card:hover, button.card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+a.card:active, button.card:active { transform: translateY(0) scale(0.995); }
+
+.btn { transition: transform var(--dur-fast) var(--ease-out), background var(--dur) ease, box-shadow var(--dur) ease, opacity var(--dur) ease; }
+.btn:not(:disabled):active { transform: scale(0.97); }
+.btn:not(:disabled):hover { box-shadow: 0 4px 14px rgba(28,27,25,0.12); }
+
+.choice { transition: transform var(--dur-fast) var(--ease-out), background var(--dur) ease, border-color var(--dur) ease, color var(--dur) ease; }
+.choice:active { transform: scale(0.96); }
+.choice.selected { animation: popIn var(--dur) var(--ease-spring); }
+
+.pill { transition: background var(--dur) ease, color var(--dur) ease, transform var(--dur-fast) var(--ease-out); }
+
+/* Item resolve (approve/dismiss/done) — slide + collapse out. */
+.resolving { animation: slideOutRight var(--dur-slow) var(--ease-out) forwards; overflow: hidden; }
+
+/* Reply card / banners popping in. */
+.pop-in { animation: scaleIn var(--dur) var(--ease-out) both; }
+
+/* Command-bar mic while listening. */
+.cmd-mic.listening { animation: pulseRing 1.6s var(--ease-out) infinite; }
+
+/* Tab bar: animated active state. */
+.tabbar a { transition: color var(--dur) ease; }
+.tabbar a .glyph { transition: transform var(--dur) var(--ease-spring); display: inline-block; }
+.tabbar a.active .glyph { transform: translateY(-2px) scale(1.14); }
+
+/* Avatar / header subtle. */
+.avatar-btn { transition: transform var(--dur-fast) var(--ease-out); }
+.avatar-btn:active { transform: scale(0.92); }
+
+/* Skeleton loading (replaces "Loading…" text). */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, #ece5da 37%, var(--surface-2) 63%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: var(--radius-sm);
+}
+.sk-line { height: 12px; margin: 8px 0; }
+.sk-card { height: 84px; border-radius: var(--radius); margin-bottom: 12px; }
+
+/* Progress bar fill animates. */
+.bar-fill { transition: width var(--dur-slow) var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .screen > * { animation: none !important; }
+}
+
+/* Page cross-fade wrapper (template.tsx). It must fill the phone column so the
+   inner .screen can flex+scroll — but .screen itself stays block flow, or its
+   cards would flex-shrink and collapse. */
+.page-enter { animation: fadeIn var(--dur) var(--ease-out) both; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+/* =========================================================================
+   DESKTOP SHELL — sidebar layout for wide screens, with a view toggle so the
+   user can switch between the desktop experience and the mobile-app frame.
+   ========================================================================= */
+.deskshell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 264px 1fr;
+  background:
+    radial-gradient(1000px 700px at 12% -10%, #fff7ee 0%, var(--paper) 55%);
+}
+.sidebar {
+  position: sticky; top: 0; height: 100dvh;
+  display: flex; flex-direction: column;
+  padding: 26px 18px;
+  border-right: 1px solid var(--border);
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(8px);
+}
+.sidebar .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 22px; }
+.side-nav { display: flex; flex-direction: column; gap: 4px; }
+.side-nav a {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: 12px;
+  font-size: 15px; font-weight: 600; color: var(--ink-soft);
+  transition: background var(--dur) ease, color var(--dur) ease, transform var(--dur-fast) var(--ease-out);
+}
+.side-nav a .glyph { font-size: 18px; width: 22px; text-align: center; }
+.side-nav a:hover { background: var(--surface-2); color: var(--ink); }
+.side-nav a.active { background: var(--brand-soft); color: var(--brand-ink); }
+.side-nav a:active { transform: scale(0.98); }
+.sidebar .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding-top: 16px; }
+
+.deskmain { min-width: 0; padding: 0 clamp(20px, 4vw, 56px); }
+.deskmain .page-enter, .deskmain .screen {
+  display: block; flex: none; min-height: 0;
+}
+.deskmain .screen {
+  max-width: 780px; margin: 0 auto;
+  height: auto; overflow: visible;
+  padding: 34px 0 64px;
+}
+/* On desktop the command bar and headers get a touch more room. */
+.deskmain .cmdbar { max-width: 620px; }
+
+/* Segmented view toggle (desktop ⟷ mobile). */
+.view-toggle {
+  display: inline-flex; background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px; gap: 2px;
+}
+.view-toggle button {
+  border: none; background: transparent; cursor: pointer;
+  padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  color: var(--muted); transition: background var(--dur) ease, color var(--dur) ease;
+}
+.view-toggle button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+/* Floating toggle shown over the phone frame on wide screens in mobile view. */
+.float-toggle {
+  position: fixed; top: 18px; right: 18px; z-index: 50;
+}
+@media (max-width: 899px) { .float-toggle { display: none; } }
+
+/* Two-up grid available to desktop screens that want it. */
+.deskmain .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 620px) { .deskmain .grid-2 { grid-template-columns: 1fr; } }
+
+/* Icon glyph wrappers align the SVG cleanly. */
+.glyph { display: inline-flex; align-items: center; justify-content: center; }
+.side-nav a .glyph { width: 22px; }
+.cmd-mic svg { color: #fff; }
+.view-toggle button { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Tab-bar active indicator — a soft pill behind the active icon. */
+.tabbar a .glyph { position: relative; padding: 5px 12px; border-radius: 999px; transition: background var(--dur) var(--ease-out); }
+.tabbar a.active .glyph { background: var(--brand-soft); }
+
+/* Keyboard focus (desktop): a clear, on-brand ring — never on mouse click. */
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
+
+/* Smooth momentum scrolling inside the phone screen. */
+.screen { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
