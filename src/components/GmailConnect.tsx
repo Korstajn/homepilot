@@ -19,6 +19,21 @@ interface ProbeMessage {
   date: string | null;
 }
 
+interface ImportedBill {
+  provider: string;
+  amount: number | null;
+  renewalDate: string | null;
+}
+
+interface ImportResult {
+  days: number;
+  found: number;
+  alreadyImported: number;
+  imported: ImportedBill[];
+  withAttachments: number;
+  failed: number;
+}
+
 // Fixed copy per reason code. The callback route never passes Google's own
 // error text through, so nothing attacker-influenced reaches the page.
 const NOTICE: Record<string, { text: string; ok?: boolean }> = {
@@ -40,6 +55,11 @@ export default function GmailConnect({ next }: { next: string }) {
   const [probe, setProbe] = useState<{ total: number | null; messages: ProbeMessage[] } | null>(null);
   const [probeError, setProbeError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [days, setDays] = useState(30);
+  const [search, setSearch] = useState<{ total: number | null; messages: ProbeMessage[] } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState<ImportResult | null>(null);
+  const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -93,6 +113,42 @@ export default function GmailConnect({ next }: { next: string }) {
     setNotice({ text: 'Gmail disconnected and access revoked at Google.', ok: true });
     trackClient('gmail_disconnect_clicked');
     load();
+  }
+
+  async function runSearch() {
+    setBusy(true);
+    setActionError('');
+    setImported(null);
+    const res = await fetch(`/api/gmail/search?days=${days}&max=25`);
+    const json = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(json.error ?? 'Could not search your inbox.');
+      if (json.reconnect) load();
+      return;
+    }
+    setSearch({ total: json.total ?? null, messages: json.messages ?? [] });
+  }
+
+  // Separate from the search on purpose: this one reads message content, and
+  // the button that does it should never be the one the user already pressed
+  // expecting subject lines.
+  async function runImport() {
+    setImporting(true);
+    setActionError('');
+    const res = await fetch('/api/gmail/import', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ days }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setImporting(false);
+    if (!res.ok) {
+      setActionError(json.error ?? 'Could not import from your inbox.');
+      if (json.reconnect) load();
+      return;
+    }
+    setImported(json as ImportResult);
   }
 
   async function runProbe() {
@@ -184,7 +240,8 @@ export default function GmailConnect({ next }: { next: string }) {
           <p className="small" style={{ margin: 0 }}>
             Instead of forwarding each email, you can let GiGi look for bills itself.
             <strong> Read-only</strong> — GiGi can never send, delete or change anything in your
-            inbox, and only reads the subject lines of emails that look like bills.
+            inbox. Searching reads subject lines only. Importing a bill opens that one email and
+            its PDF invoice, and only ever when you press the button yourself.
           </p>
           <button className="btn btn-primary btn-sm" onClick={connect}>
             Connect Gmail →
@@ -245,7 +302,95 @@ export default function GmailConnect({ next }: { next: string }) {
             </div>
           )}
 
-          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={disconnect}>
+          <div style={{ borderTop: '1px solid var(--line, rgba(0,0,0,.08))', paddingTop: 12 }}>
+            <div className="row between" style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label className="tiny muted" htmlFor="gmail-days">
+                Look back
+              </label>
+              <select
+                id="gmail-days"
+                className="tiny"
+                value={days}
+                onChange={(e) => setDays(Number(e.target.value))}
+              >
+                <option value={30}>1 month</option>
+                <option value={60}>2 months</option>
+                <option value={90}>3 months</option>
+              </select>
+              <button className="btn btn-subtle btn-sm" disabled={busy || importing} onClick={runSearch}>
+                {busy ? 'Searching…' : 'Search my inbox'}
+              </button>
+            </div>
+
+            {search && (
+              <div style={{ background: 'var(--surface-2)', padding: '12px 14px', borderRadius: 12, marginTop: 10 }}>
+                <p className="tiny muted" style={{ marginTop: 0 }}>
+                  {search.messages.length === 0
+                    ? `No bill-looking emails in the last ${days} days.`
+                    : `${search.messages.length} bill-looking email(s). Subject lines only — no message content was requested.`}
+                </p>
+                <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+                  {search.messages.map((m, i) => (
+                    <li key={i} style={{ marginBottom: 4 }}>
+                      <strong>{m.subject ?? '(no subject)'}</strong>
+                      {m.from && <span className="tiny muted"> — {m.from}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/*
+            The one place GiGi reads message content. The copy says so before
+            the button, not after it — a search that quietly grew into a full
+            read is exactly what the metadata allow-list exists to prevent.
+          */}
+          <div style={{ borderTop: '1px solid var(--line, rgba(0,0,0,.08))', paddingTop: 12 }}>
+            <div className="small" style={{ fontWeight: 600 }}>Import bills</div>
+            <p className="tiny muted" style={{ margin: '4px 0 8px' }}>
+              To read an amount and a renewal date, GiGi has to open the email itself and any
+              PDF invoice attached to it — a subject line almost never carries either. This is
+              the only feature that reads message content, it happens when you press this
+              button and never on a schedule, and every email opened is recorded in your{' '}
+              <strong>trust log</strong>. Imported bills arrive unconfirmed for you to check.
+            </p>
+            <button className="btn btn-primary btn-sm" disabled={busy || importing} onClick={runImport}>
+              {importing ? 'Reading your inbox…' : `Import bills from the last ${days} days`}
+            </button>
+
+            {imported && (
+              <div style={{ background: 'var(--surface-2)', padding: '12px 14px', borderRadius: 12, marginTop: 10 }}>
+                <p className="tiny muted" style={{ marginTop: 0 }}>
+                  Found {imported.found} bill-looking email(s)
+                  {imported.alreadyImported > 0 && `, ${imported.alreadyImported} already imported`}
+                  {imported.withAttachments > 0 && `, ${imported.withAttachments} with a PDF`}
+                  {imported.failed > 0 && `, ${imported.failed} could not be read`}.
+                </p>
+                {imported.imported.length === 0 ? (
+                  <p className="small" style={{ margin: 0 }}>Nothing new to add.</p>
+                ) : (
+                  <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+                    {imported.imported.map((b, i) => (
+                      <li key={i} style={{ marginBottom: 4 }}>
+                        <strong>{b.provider}</strong>
+                        <span className="tiny muted">
+                          {b.amount !== null ? ` — ${b.amount}/mo` : ' — amount not found'}
+                          {b.renewalDate ? `, renews ${b.renewalDate}` : ', no renewal date found'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+
+          {actionError && (
+            <p className="small" style={{ margin: 0, color: 'var(--danger)' }}>{actionError}</p>
+          )}
+
+          <button className="btn btn-ghost btn-sm" disabled={busy || importing} onClick={disconnect}>
             Disconnect Gmail
           </button>
         </>

@@ -26,7 +26,9 @@ export function subprocessors(): Subprocessor[] {
       name: 'GiGi AI (Anthropic, EU region)',
       role: 'Reads a forwarded email into structured fields',
       region: 'EU',
-      data: 'One email at a time; raw text is not retained after extraction',
+      data:
+        'One email at a time, plus its PDF invoice when you import from Gmail; ' +
+        'raw text is not retained after extraction',
       active: aiEnabled,
       note: aiEnabled ? 'Enabled' : 'Not in use — analysis currently runs on our server with no AI',
     },
@@ -46,7 +48,10 @@ export function subprocessors(): Subprocessor[] {
       name: 'Gmail (Google)',
       role: 'Lets GiGi look for bills in your inbox, read-only, if you connect it',
       region: 'Outside the EU (Google)',
-      data: 'Subject lines of bill-looking emails. GiGi never requests message bodies',
+      data:
+        'Subject lines when GiGi searches. When you press Import, the emails you import — ' +
+        'body text and PDF invoices — are read and sent for extraction; only the extracted ' +
+        'fields are kept, never the email',
       active: gmailAvailable,
       note: gmailAvailable
         ? 'Optional — forwarding needs no account access at all. Disconnect any time and access is revoked at Google'

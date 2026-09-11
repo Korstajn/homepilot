@@ -293,18 +293,68 @@ export interface ProbeMessage {
 }
 
 /**
- * The default search GiGi would use. Bounded in time, skips spam and trash, and
- * includes Swedish terms because the second market is Sweden (DECISIONS.md §2).
+ * The bill-hunting terms, without the guards that bound every search. Includes
+ * Swedish because the second market is Sweden (DECISIONS.md §2).
  */
-export const DEFAULT_GMAIL_QUERY =
-  '(invoice OR bill OR receipt OR renewal OR faktura OR kvitto OR förnyelse) newer_than:60d -in:spam -in:trash';
+export const BILL_TERMS =
+  'invoice OR bill OR receipt OR renewal OR faktura OR kvitto OR förnyelse';
+
+/**
+ * Compose a Gmail query from caller-supplied terms plus the guards that must
+ * hold on every search GiGi makes.
+ *
+ * The parentheses around `terms` are load-bearing, not decoration. Gmail's
+ * implicit AND binds tighter than OR, so `a OR b newer_than:30d` parses as
+ * `a OR (b AND newer_than:30d)` — the time bound silently stops applying to the
+ * first branch, and a search meant to cover one month quietly returns the whole
+ * mailbox. Wrapping the terms keeps the bound over all of them.
+ */
+export function buildGmailQuery(opts: { terms?: string; days: number }): string {
+  const terms = (opts.terms ?? BILL_TERMS).trim() || BILL_TERMS;
+  const days = Math.min(Math.max(Math.round(opts.days) || 30, 1), 365);
+  return `(${terms}) newer_than:${days}d -in:spam -in:trash`;
+}
+
+/** The default search GiGi would use, built through the same guards. */
+export const DEFAULT_GMAIL_QUERY = buildGmailQuery({ days: 60 });
+
+async function listMessageIds(
+  accessToken: string,
+  query: string,
+  max: number,
+): Promise<{ ids: string[]; total: number | null } | { error: string }> {
+  const listUrl = new URL(`${GMAIL_API}/messages`);
+  listUrl.searchParams.set('q', query);
+  listUrl.searchParams.set('maxResults', String(max));
+
+  const res = await fetch(listUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => ({}))) as { error?: { status?: string } };
+    return { error: detail.error?.status ?? `gmail_list_${res.status}` };
+  }
+  const list = (await res.json()) as {
+    messages?: { id: string }[];
+    resultSizeEstimate?: number;
+  };
+  return {
+    ids: (list.messages ?? []).slice(0, max).map((m) => m.id),
+    total: list.resultSizeEstimate ?? null,
+  };
+}
 
 /**
  * List matching messages and return only their From/Subject/Date headers.
  *
  * `format=metadata` with an explicit header allow-list is the point: Gmail never
- * sends us a message body, so the probe cannot leak content even by accident.
- * This is data minimisation at the API call, not in a later filter.
+ * sends us a message body, so this cannot leak content even by accident. This is
+ * data minimisation at the API call, not in a later filter.
+ *
+ * Reading message CONTENT is a separate, louder act with its own function
+ * (`fetchMessageContent`) and its own trust-log entry. Keeping them apart is
+ * deliberate: a search that only ever sees headers must stay provably so.
  */
 export async function probeMessages(
   accessToken: string,
@@ -313,21 +363,10 @@ export async function probeMessages(
 ): Promise<{ total: number | null; messages: ProbeMessage[] } | { error: string }> {
   const auth = { Authorization: `Bearer ${accessToken}` };
 
-  const listUrl = new URL(`${GMAIL_API}/messages`);
-  listUrl.searchParams.set('q', query);
-  listUrl.searchParams.set('maxResults', String(max));
+  const listed = await listMessageIds(accessToken, query, max);
+  if ('error' in listed) return { error: listed.error };
+  const { ids, total } = listed;
 
-  const listRes = await fetch(listUrl, { headers: auth, cache: 'no-store' });
-  if (!listRes.ok) {
-    const detail = (await listRes.json().catch(() => ({}))) as { error?: { status?: string } };
-    return { error: detail.error?.status ?? `gmail_list_${listRes.status}` };
-  }
-  const list = (await listRes.json()) as {
-    messages?: { id: string }[];
-    resultSizeEstimate?: number;
-  };
-
-  const ids = (list.messages ?? []).slice(0, max).map((m) => m.id);
   const messages = await Promise.all(
     ids.map(async (id) => {
       const url = new URL(`${GMAIL_API}/messages/${encodeURIComponent(id)}`);
@@ -346,5 +385,180 @@ export async function probeMessages(
     }),
   );
 
-  return { total: list.resultSizeEstimate ?? null, messages };
+  return { total, messages };
+}
+
+// --- Reading message content (the louder act) --------------------------------
+//
+// Everything above this line sees headers only. Everything below requests the
+// message itself, which is a materially different thing to do to somebody's
+// mailbox — different consent, a different trust-log action (`mailbox_read`),
+// and a different line in the subprocessor list. The split is kept visible on
+// purpose so neither side can quietly grow into the other.
+
+/** Hard ceilings, so one pathological email cannot blow up a request. */
+export const MAX_BODY_CHARS = 20_000;
+export const MAX_PDFS_PER_MESSAGE = 2;
+export const MAX_PDF_BYTES = 4 * 1024 * 1024;
+
+export interface MessageAttachment {
+  filename: string;
+  mediaType: string;
+  /** Standard base64 (not base64url) — what the Anthropic document block wants. */
+  data: string;
+}
+
+export interface MessageContent {
+  id: string;
+  from: string | null;
+  subject: string | null;
+  date: string | null;
+  text: string;
+  attachments: MessageAttachment[];
+  /** PDFs found but skipped (too large, or past the per-message cap). */
+  skippedAttachments: number;
+}
+
+/** Gmail encodes body and attachment payloads base64url, without padding. */
+function decodeB64Url(data: string): Buffer {
+  return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+}
+
+/**
+ * Crude but sufficient HTML → text. Billing emails are overwhelmingly HTML, and
+ * the extractor wants prose, not markup: script/style content is noise that
+ * would otherwise dominate the token budget and bury the amount.
+ */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|h[1-6]|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+interface GmailPart {
+  mimeType?: string;
+  filename?: string;
+  headers?: { name: string; value: string }[];
+  body?: { data?: string; attachmentId?: string; size?: number };
+  parts?: GmailPart[];
+}
+
+/**
+ * Walk the MIME tree once, collecting the best text and any PDF attachments.
+ *
+ * text/plain wins over text/html when a message offers both — that is the whole
+ * point of a multipart/alternative, and the plain part costs far fewer tokens.
+ */
+function walkParts(
+  part: GmailPart | undefined,
+  acc: { plain: string[]; html: string[]; pdfs: { id: string; filename: string; size: number }[] },
+): void {
+  if (!part) return;
+  const mime = (part.mimeType ?? '').toLowerCase();
+
+  if (mime === 'text/plain' && part.body?.data) {
+    acc.plain.push(decodeB64Url(part.body.data).toString('utf8'));
+  } else if (mime === 'text/html' && part.body?.data) {
+    acc.html.push(decodeB64Url(part.body.data).toString('utf8'));
+  }
+
+  // An invoice is usually the attachment, not the email. Only PDFs: they are
+  // what providers actually send, and every other type is either noise
+  // (tracking pixels, logos) or something we have no business opening.
+  if (mime === 'application/pdf' && part.body?.attachmentId) {
+    acc.pdfs.push({
+      id: part.body.attachmentId,
+      filename: part.filename || 'attachment.pdf',
+      size: part.body.size ?? 0,
+    });
+  }
+
+  for (const child of part.parts ?? []) walkParts(child, acc);
+}
+
+async function fetchAttachment(
+  accessToken: string,
+  messageId: string,
+  attachmentId: string,
+): Promise<string | null> {
+  const url = `${GMAIL_API}/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) return null;
+  const json = (await res.json()) as { data?: string };
+  if (!json.data) return null;
+  // Re-encode as standard base64: the Anthropic document block rejects base64url.
+  return decodeB64Url(json.data).toString('base64');
+}
+
+/**
+ * Fetch one message in full — headers, body text, and its PDF attachments.
+ *
+ * `format=full` is the deliberate opposite of the metadata probe above: it
+ * returns the message. Callers must have told the user that, and must record
+ * `mailbox_read` in the trust log.
+ */
+export async function fetchMessageContent(
+  accessToken: string,
+  id: string,
+): Promise<MessageContent | { error: string }> {
+  const url = new URL(`${GMAIL_API}/messages/${encodeURIComponent(id)}`);
+  url.searchParams.set('format', 'full');
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => ({}))) as { error?: { status?: string } };
+    return { error: detail.error?.status ?? `gmail_get_${res.status}` };
+  }
+
+  const msg = (await res.json()) as { payload?: GmailPart; snippet?: string };
+  const header = (name: string) =>
+    msg.payload?.headers?.find((h) => h.name.toLowerCase() === name)?.value ?? null;
+
+  const acc = { plain: [] as string[], html: [] as string[], pdfs: [] as { id: string; filename: string; size: number }[] };
+  walkParts(msg.payload, acc);
+
+  const body = acc.plain.length ? acc.plain.join('\n\n') : htmlToText(acc.html.join('\n\n'));
+  const text = (body || msg.snippet || '').slice(0, MAX_BODY_CHARS);
+
+  const wanted = acc.pdfs.filter((p) => p.size <= MAX_PDF_BYTES).slice(0, MAX_PDFS_PER_MESSAGE);
+  const attachments: MessageAttachment[] = [];
+  for (const pdf of wanted) {
+    const data = await fetchAttachment(accessToken, id, pdf.id);
+    if (data) attachments.push({ filename: pdf.filename, mediaType: 'application/pdf', data });
+  }
+
+  return {
+    id,
+    from: header('from'),
+    subject: header('subject'),
+    date: header('date'),
+    text,
+    attachments,
+    skippedAttachments: acc.pdfs.length - attachments.length,
+  };
+}
+
+/** Message ids for a query — the entry point for a content-reading import. */
+export async function searchMessageIds(
+  accessToken: string,
+  query: string,
+  max: number,
+): Promise<{ ids: string[]; total: number | null } | { error: string }> {
+  return listMessageIds(accessToken, query, max);
 }

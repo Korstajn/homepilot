@@ -24,7 +24,10 @@ accepted as the cost. Consequences we own rather than hide:
 
 - The nightly 02:00 job **cannot** read Gmail. The refresh token is sealed into
   the user's own cookie, never stored server-side, so no server job can use it.
-  That is the honest shape of this until the Postgres swap.
+  That is the honest shape of this until the Postgres swap. It is also, for now,
+  a useful constraint rather than only a limitation: it makes "GiGi reads your
+  mailbox only while you are in the app, having pressed a button" true by
+  construction rather than by policy.
 - Forwarding stays the recommended route in onboarding copy. Gmail is never the
   step a household has to complete.
 - Publishing the restricted scope (verification + CASA, 6–10 weeks) is **not**
@@ -59,6 +62,34 @@ region as **"Google (not EU-resident)"** and the subprocessor list on
 `/app/data` names Gmail whenever the deployment can offer the grant — but the
 privacy *copy* still needs rewriting, and the DPIA needs extending, before this
 is offered beyond a closed beta.
+
+**Amended — Gmail import reads message content.** `/api/gmail/import` requests
+`format=full` and downloads PDF invoices. The earlier claim that GiGi "never
+requests message bodies" now holds only for the search paths, and every place
+that said otherwise has been corrected rather than left to age. What this costs,
+stated plainly so the DPIA extension has something to work from:
+
+- **Body text is redacted before inference; a PDF is not.** `redactPII` masks
+  addresses, phone numbers, postcodes and long digit runs in text. An attached
+  invoice goes to the model as it is, and invoices routinely carry a name, a
+  postal address and an account number. This is the single biggest gap.
+- **A mailbox contains other people's data.** Bill emails are the target, but
+  the search is a keyword match, and a household's inbox holds correspondence
+  about children and third parties. Prompt 1 is instructed never to extract
+  information about other families' children; an instruction is a mitigation,
+  not a guarantee.
+- **Email content is attacker-controllable.** Anyone can email a household.
+  Content read out of a mailbox is now untrusted input reaching a model, so the
+  extraction system prompt states that the email is data and never instructions.
+  That boundary matters more, not less, the day an extracted bill drives an
+  executable action — it is written in now, while the blast radius is a wrong
+  row in a register.
+
+The mitigations that hold today: the read is user-triggered only (no scheduled
+path exists, and none can while the token lives in the user's cookie), capped at
+12 messages per run, logged per message as `mailbox_read`, and everything
+extracted lands **unconfirmed**. **The DPIA must be extended before this is
+offered beyond a closed beta** — this amendment records what it has to cover.
 
 ## Product-logic contradictions resolved
 
