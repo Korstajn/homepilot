@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PhoneFrame from '@/components/PhoneFrame';
 import { trackClient } from '@/lib/analytics';
 
@@ -14,6 +14,17 @@ export default function Login() {
   const [useRecovery, setUseRecovery] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [testers, setTesters] = useState<{ email: string; name: string }[]>([]);
+
+  // The GIGI_DEV_USERS accounts this deployment has, so a tester doesn't have to
+  // guess the addresses. Addresses and names only — the endpoint never returns
+  // GIGI_DEV_PASSWORD, and returns nothing at all when test accounts are off.
+  useEffect(() => {
+    fetch('/api/auth/dev-users')
+      .then((r) => r.json())
+      .then((j) => setTesters(j.enabled ? j.users ?? [] : []))
+      .catch(() => {});
+  }, []);
 
   async function submit() {
     setError('');
@@ -30,7 +41,11 @@ export default function Login() {
       return;
     }
     trackClient('login_success');
-    router.push('/app/digest');
+    // Honour ?next= so someone bounced here from /api/auth/google/start lands
+    // back where they were, not on the digest. Same-origin paths only.
+    const requested = new URLSearchParams(window.location.search).get('next');
+    const safe = requested && requested.startsWith('/') && !requested.startsWith('//') ? requested : null;
+    router.push(safe ?? '/app/digest');
   }
 
   async function demo() {
@@ -76,6 +91,29 @@ export default function Login() {
             {useRecovery ? 'Use email & password instead' : 'Log in with a recovery code (no email)'}
           </button>
         </div>
+
+        {testers.length > 0 && !useRecovery && (
+          <div className="card stack" style={{ marginTop: 12 }}>
+            <p className="eyebrow" style={{ margin: 0 }}>Test accounts on this build</p>
+            {testers.map((t) => (
+              <div className="row between" key={t.email}>
+                <div>
+                  <div className="small" style={{ fontWeight: 600 }}>{t.name}</div>
+                  <span className="tiny muted">{t.email}</span>
+                </div>
+                <button
+                  className="btn btn-subtle btn-sm"
+                  onClick={() => { setEmail(t.email); setError(''); }}
+                >
+                  Use
+                </button>
+              </div>
+            ))}
+            <p className="tiny muted" style={{ margin: 0 }}>
+              The password is the one set as GIGI_DEV_PASSWORD for this deployment.
+            </p>
+          </div>
+        )}
 
         <p className="small center" style={{ marginTop: 16 }}>
           New here? <Link href="/signup" className="link">Create an account</Link>

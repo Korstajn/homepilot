@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import GmailConnect from '@/components/GmailConnect';
 import { trackClient } from '@/lib/analytics';
 import type { Household } from '@/lib/types';
 
@@ -87,6 +88,8 @@ export default function Settings() {
           </button>
         )}
       </section>
+
+      <GmailConnect next="/app/settings" />
 
       <section className="card stack">
         <h3>Digest delivery</h3>

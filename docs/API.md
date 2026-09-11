@@ -31,6 +31,13 @@ cookie. Locally, with `GIGI_BETA_CODE` unset, the gate is off.
 | GET    | `/api/contact`          | Message count only — the messages themselves are personal data.|
 | POST   | `/api/beta`             | Open the beta gate: `{code}`. Sets the `gigi_beta` cookie for 30 days. Rate-limited per IP. |
 | DELETE | `/api/beta`             | Clear the beta cookie — lock this browser out again.          |
+| GET    | `/api/auth/me`          | Session + household + capabilities. `session` is `none` \| `active` \| `stale`. |
+| GET    | `/api/auth/dev-users`   | Test accounts on this deployment (addresses + names only, never the password). Empty unless `GIGI_DEV_PASSWORD` is set. |
+| GET    | `/api/auth/google/start`| Redirect to Google's Gmail consent screen. Needs a real session; refuses the demo household. |
+| GET    | `/api/auth/google/callback` | OAuth return leg. Failures redirect back with a fixed `?gmail=<reason>`. |
+| GET    | `/api/auth/google`      | Gmail connection status. Never returns the token.             |
+| DELETE | `/api/auth/google`      | Revoke the Gmail grant at Google and clear the cookie.        |
+| GET    | `/api/gmail/probe`      | Read-only proof the grant works: `From`/`Subject`/`Date` of up to 10 bill-looking emails. Message bodies are never requested. |
 
 ## Response conventions
 

@@ -13,6 +13,7 @@ export interface Subprocessor {
 
 export function subprocessors(): Subprocessor[] {
   const aiEnabled = Boolean(process.env.ANTHROPIC_API_KEY);
+  const gmailAvailable = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
   return [
     {
       name: 'GiGi server (Render, Frankfurt)',
@@ -36,6 +37,20 @@ export function subprocessors(): Subprocessor[] {
       data: 'Emails you choose to forward',
       active: true,
       note: 'Only receives what you forward — never connected to your inbox',
+    },
+    {
+      // Listed whenever the deployment CAN offer the Gmail grant, not only once
+      // someone has taken it: the trust screen is about what is possible, and a
+      // subprocessor that appears only after you have already consented is not
+      // disclosure.
+      name: 'Gmail (Google)',
+      role: 'Lets GiGi look for bills in your inbox, read-only, if you connect it',
+      region: 'Outside the EU (Google)',
+      data: 'Subject lines of bill-looking emails. GiGi never requests message bodies',
+      active: gmailAvailable,
+      note: gmailAvailable
+        ? 'Optional — forwarding needs no account access at all. Disconnect any time and access is revoked at Google'
+        : 'Not available on this deployment',
     },
     {
       name: 'Your concierge',

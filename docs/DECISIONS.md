@@ -11,9 +11,24 @@ Each item below is reflected in the code, not just noted.
 on top of normal verification, realistically 6–10 weeks. Testing-mode refresh
 tokens also expire after 7 days with sensitive/restricted scopes — a nightly
 02:00 job would fail weekly per household.
-**Build choice:** no OAuth anywhere. The "Connect" step (`/onboarding/connect`)
-gives the user a **forward-to-GiGi address**; bills also enter via **manual add**.
-Zero OAuth, zero verification, off the critical path.
+**Build choice:** forwarding is the primary path and the only one on the
+critical path. The "Connect" step (`/onboarding/connect`) gives the user a
+**forward-to-GiGi address**; bills also enter via **manual add**. Neither needs
+Google.
+
+**Amended:** Gmail OAuth now exists as an *optional* second route
+(`docs/GMAIL_OAUTH.md`), for testers who would rather not set up a filter. It
+changes nothing about the analysis above — it is offered **in Testing mode**, so
+verification and CASA do not apply, and the 7-day refresh-token expiry is
+accepted as the cost. Consequences we own rather than hide:
+
+- The nightly 02:00 job **cannot** read Gmail. The refresh token is sealed into
+  the user's own cookie, never stored server-side, so no server job can use it.
+  That is the honest shape of this until the Postgres swap.
+- Forwarding stays the recommended route in onboarding copy. Gmail is never the
+  step a household has to complete.
+- Publishing the restricted scope (verification + CASA, 6–10 weeks) is **not**
+  started and should not be until the product has earned it.
 
 ### 2. Two markets in one 50-household beta → **single-market default**
 The bills vertical is UK-shaped (£, ICO, comparison platforms). Sweden is a
@@ -35,6 +50,15 @@ the extraction prompt against a non-EU API.
 **Build choice:** the privacy page states EU/UK storage **and** EU-region
 inference; `ANTHROPIC_REGION=eu` is the documented default, and Render deploys to
 `frankfurt`. DPIA is called out in the privacy copy as a pre-onboarding gate.
+
+**Open contradiction, deliberately left visible:** connecting Gmail means a
+mailbox read on Google's infrastructure, which is not EU-resident. Storage and
+inference stay in the EU, but "EU data only" is not the whole truth for a
+household that connects Gmail. The trust log records those events with the
+region as **"Google (not EU-resident)"** and the subprocessor list on
+`/app/data` names Gmail whenever the deployment can offer the grant — but the
+privacy *copy* still needs rewriting, and the DPIA needs extending, before this
+is offered beyond a closed beta.
 
 ## Product-logic contradictions resolved
 

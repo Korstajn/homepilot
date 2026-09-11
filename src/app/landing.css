@@ -65,6 +65,11 @@ html:has(.landing){scroll-behavior:smooth;scroll-padding-top:80px;}
 
 .landing .nav-links a:hover{color:var(--ink);}
 
+/* "Log in" in the nav's right-hand group: matches .nav-links a, but stays
+   visible at phone widths where .nav-links is hidden. */
+.landing .nav-login{font-size:14px;font-weight:500;color:var(--ink3);transition:color .15s;white-space:nowrap;}
+.landing .nav-login:hover{color:var(--ink);}
+
 .landing .btn-primary{padding:9px 20px;border-radius:var(--rs);background:var(--ink);color:var(--bone);font-size:14px;font-weight:600;border:none;cursor:pointer;transition:all .15s;font-family:var(--font-sans), sans-serif;display:flex;align-items:center;gap:6px;}
 
 .landing .btn-primary:hover{background:#1A1D18;transform:translateY(-1px);}

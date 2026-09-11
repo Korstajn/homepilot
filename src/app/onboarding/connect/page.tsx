@@ -4,10 +4,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Progress } from '@/components/OnboardingProgress';
 import ForwardTester from '@/components/ForwardTester';
+import GmailConnect from '@/components/GmailConnect';
 import { trackClient } from '@/lib/analytics';
 
-// No OAuth in the beta (docs/DECISIONS.md §1): the user forwards known senders
-// to their private GiGi address. Zero verification, zero critical path.
+// Two ways in, and the order matters. Forwarding is still the recommended route
+// (docs/DECISIONS.md §1): zero account access, nothing to verify, off the
+// critical path. Gmail OAuth is offered underneath it for testers who would
+// rather not set up a filter — read-only, and only when this deployment has a
+// Google client configured (docs/GMAIL_OAUTH.md).
 export default function Connect() {
   const router = useRouter();
   const [address, setAddress] = useState('…');
@@ -25,8 +29,9 @@ export default function Connect() {
       <Progress step={2} />
       <h1>Connect your inbox</h1>
       <p>
-        No passwords, no account access. You forward the emails GiGi should watch — bills,
-        school, travel — to your private address. GiGi can only ever read what you send it.
+        Two ways to do this. <strong>Forward</strong> the emails GiGi should watch — bills,
+        school, travel — to your private address, and GiGi only ever sees what you send it.
+        Or <strong>connect Gmail</strong> read-only and let GiGi find the bills itself.
       </p>
 
       <div className="card stack">
@@ -65,6 +70,10 @@ export default function Connect() {
       <div style={{ marginTop: 12 }}>
         <ForwardTester />
       </div>
+
+      <div className="divider" />
+
+      <GmailConnect next="/onboarding/connect" />
 
       <button
         className="btn btn-primary"

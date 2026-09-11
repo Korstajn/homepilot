@@ -21,9 +21,63 @@ changed by shipping here.
 | `GIGI_SITE_ENV` | `development` | Anything but `production` ⇒ `robots.txt` disallows everything. |
 | `GIGI_DEFAULT_MARKET` | `uk` | Market for new households (`uk` \| `se`). |
 | `NODE_VERSION` | `22` | `package.json` engines allows 20–22. |
+| `GIGI_SESSION_SECRET` | 32 random bytes | Signs session cookies. Needed for logins to survive on serverless — see below. |
+| `GIGI_DEV_PASSWORD` | the shared test password | Enables the test accounts. **Unset ⇒ no test accounts exist.** |
+| `GIGI_DEV_USERS` | *(optional)* | `email:Name, email:Name`. Defaults to two accounts on `example.com`. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | *(optional)* | Gmail OAuth client. Unset ⇒ Connect-Gmail shows "Unavailable". |
+| `GOOGLE_REDIRECT_URI` | `https://<domain>/api/auth/google/callback` | Must match Google Cloud Console exactly. |
 
 `.env.example` documents the rest (Anthropic, Supabase) — none of them are
 needed to boot.
+
+## Accounts on Vercel: what works and what doesn't
+
+The store is in-memory (`src/lib/store.ts`), built for one long-lived Node
+process. Vercel is serverless, so each instance has its own copy and instances
+are recycled. Two consequences:
+
+- **Test accounts work.** `GIGI_DEV_USERS` accounts are *derived* from the
+  environment, not stored — every instance computes the identical household id,
+  member id and subject id, so a session minted on one instance resolves on the
+  next. This is the way to have a working login today.
+- **Sign-up still doesn't persist.** `/api/auth/signup` creates a household in
+  one instance's memory. It no longer degrades silently, though: a session cookie
+  that verifies but whose member is gone reports `session: "stale"` on
+  `/api/auth/me`, and the app shows "You're signed out" instead of quietly
+  serving the demo household's bills as if they were the user's own.
+
+Both go away with the Postgres swap in `db/schema.sql`.
+
+Set **`GIGI_SESSION_SECRET`** (`openssl rand -hex 32`). Without it the signing
+key falls back to `GIGI_DEV_PASSWORD`, and without that to a per-process random
+key — under which every login is lost on the next request.
+`GET /api/auth/dev-users` reports which of the three is in play.
+
+## Verifying a deploy: `GET /api/diagnostics`
+
+Open it on the deployment you just redeployed. It reports **presence, never
+values** — which variables this build can see, which deployment is answering
+(`VERCEL_ENV`, branch, commit), the resolved Google redirect URI to compare
+against Google Cloud Console, and a `warnings` array naming what is actually
+misconfigured.
+
+It exists because the two ways this goes wrong are invisible from outside: a
+variable scoped to **Production** only cannot be seen by a preview build, and a
+dashboard change never reaches a deployment that already exists. Both look
+exactly like never having set it.
+
+Lock it down or remove it before this origin serves the public site.
+
+## Getting into the app
+
+The landing page's nav has a **Log in** link (kept outside `.nav-links`, which
+is hidden under 760px, so it survives on a phone). Direct paths:
+
+| Path | What it is |
+| --- | --- |
+| `/login` | Log in. Lists the `GIGI_DEV_USERS` test accounts when they are enabled. |
+| `/app/settings` | **Connect Gmail** lives here, and on `/onboarding/connect`. |
+| `/api/diagnostics` | Configuration check for this deployment. |
 
 ## Render (recommended, and what `render.yaml` provisions)
 

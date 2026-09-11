@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { findIdentityByEmail, findIdentityByRecoveryHash, memberForSubject, createSession, track } from '@/lib/store';
-import { verifyPassword, hashRecovery, SESSION_COOKIE, COOKIE_OPTS } from '@/lib/auth';
+import { findIdentityByEmail, findIdentityByRecoveryHash, memberForSubject, track } from '@/lib/store';
+import { verifyPassword, hashRecovery, newSessionToken, SESSION_COOKIE, COOKIE_OPTS } from '@/lib/auth';
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -25,6 +25,6 @@ export async function POST(req: Request) {
 
   track('login', member.householdId, { role: member.role, method: recoveryCode ? 'recovery' : 'password' });
   const res = NextResponse.json({ ok: true, member: { name: member.name, role: member.role } });
-  res.cookies.set(SESSION_COOKIE, createSession(member.id), COOKIE_OPTS);
+  res.cookies.set(SESSION_COOKIE, newSessionToken(member.id), COOKIE_OPTS);
   return res;
 }
