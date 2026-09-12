@@ -90,9 +90,20 @@ a parent has to do:
 ```
 
 `due_date` and `event_date` are different facts: a trip has a form due one week
-and a coach leaving the next. A school date written without a year ("Thursday 8
-October") resolves forward — unlike a bill's renewal date, a school date with no
-year is unambiguously the next one.
+and a coach leaving the next.
+
+**Every date resolves against the day the email was SENT, never the day it is
+read.** School letters write "9 September" with no year and "on Friday" with no
+date at all, and both only mean something relative to when the letter went out:
+a letter sent on 1 September saying "the trip is on Friday" means 4 September,
+whether it is read that afternoon or three weeks later. The sent date is passed
+to the model as well as used by the deterministic reader, it is what the year is
+chosen against (so a letter sent on 20 December saying "5 January" lands in the
+following year), and it is shown to the user in the scan — a wrong reference
+frame is the one kind of date error that looks entirely correct.
+
+A school date with no year resolves forward from that reference; unlike a bill's
+renewal date, a school date with no year is unambiguously the next one.
 
 **The privacy rule is enforced in code, not in the prompt.** A school email is
 full of other families' children — class lists, "well done to", quoted parent

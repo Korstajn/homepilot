@@ -32,6 +32,7 @@ interface Scan {
   sourceRef: string;
   from: string | null;
   subject: string | null;
+  receivedAt: string;
   engine: string;
   extracted: {
     school: string | null;
@@ -72,6 +73,10 @@ export default function SchoolScanner({ onCreated }: { onCreated?: () => void })
   const [from, setFrom] = useState('');
   const [subject, setSubject] = useState('');
   const [text, setText] = useState('');
+  // Defaults to today, but it is the field that matters most for a letter you
+  // are pasting in later: "the trip is on Friday" is a different day depending
+  // on when the school sent it.
+  const [received, setReceived] = useState(() => new Date().toISOString().slice(0, 10));
 
   async function scan() {
     setBusy(true);
@@ -82,7 +87,9 @@ export default function SchoolScanner({ onCreated }: { onCreated?: () => void })
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(
-        mode === 'paste' ? { source: 'paste', email: { from, subject, text } } : { source: 'gmail', days: 30 },
+        mode === 'paste'
+          ? { source: 'paste', email: { from, subject, text, date: received } }
+          : { source: 'gmail', days: 30 },
       ),
     });
     const json = await res.json().catch(() => ({}));
@@ -164,6 +171,13 @@ export default function SchoolScanner({ onCreated }: { onCreated?: () => void })
             <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Year 4 trip to the Science Museum" />
           </label>
           <label className="field" style={{ marginBottom: 0 }}>
+            <span>Sent on</span>
+            <input type="date" value={received} onChange={(e) => setReceived(e.target.value)} />
+            <span className="tiny muted" style={{ display: 'block', fontWeight: 400, marginTop: 4 }}>
+              Dates like “9 September” or “on Friday” are worked out from this day, not from today.
+            </span>
+          </label>
+          <label className="field" style={{ marginBottom: 0 }}>
             <span>The email</span>
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} placeholder="Paste the whole thing — GiGi will tell you what it found." />
           </label>
@@ -201,6 +215,7 @@ export default function SchoolScanner({ onCreated }: { onCreated?: () => void })
 
           <div className="row" style={{ gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
             <span className="pill">{ENGINE_LABEL[s.engine] ?? s.engine}</span>
+            <span className="pill">dates read from {s.receivedAt}</span>
             {s.extracted.childName ? (
               <span className="pill brand">matched {s.extracted.childName}</span>
             ) : (

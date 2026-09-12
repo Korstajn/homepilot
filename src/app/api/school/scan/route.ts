@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     source?: 'gmail' | 'paste';
     days?: number;
     max?: number;
-    email?: { from?: string; subject?: string; text?: string };
+    email?: { from?: string; subject?: string; text?: string; date?: string };
     apply?: boolean;
     approve?: string[];
   };
@@ -75,6 +75,10 @@ export async function POST(req: NextRequest) {
       from: String(body.email?.from ?? '').trim(),
       subject: String(body.email?.subject ?? '').trim(),
       text: String(body.email?.text ?? '').trim(),
+      // When the letter went out. Everything relative in it — "9 September",
+      // "on Friday", "tomorrow" — is resolved against this rather than against
+      // the moment of pasting, which is usually a different day entirely.
+      date: String(body.email?.date ?? '').trim() || undefined,
     };
     if (!email.subject && !email.text) {
       return NextResponse.json({ error: 'Paste a school email (subject or body).' }, { status: 400 });
@@ -82,7 +86,7 @@ export async function POST(req: NextRequest) {
     // A stable id per pasted email, so pasting the same one twice is recognised
     // as the same email rather than creating the dates all over again.
     const digest = createHash('sha256')
-      .update(`${email.from}\n${email.subject}\n${email.text}`)
+      .update(`${email.from}\n${email.subject}\n${email.text}\n${email.date ?? ''}`)
       .digest('hex')
       .slice(0, 16);
     scans = [await planSchoolEmail(household, children, email, `paste:${digest}`)];
@@ -130,6 +134,9 @@ export async function POST(req: NextRequest) {
             from: content.from ?? undefined,
             subject: content.subject ?? undefined,
             text: content.text,
+            // Gmail's Date header is the reference frame for every relative
+            // date in the message. Fetching it and not using it was the bug.
+            date: content.date ?? undefined,
             attachments: content.attachments.map((a) => ({ mediaType: a.mediaType, data: a.data })),
           },
           `gmail:${id}`,
