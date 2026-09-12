@@ -10,7 +10,7 @@
  */
 
 import type { CalendarEvent, Child, Household } from './types';
-import { extractSchool, looksLikeSchool, type ExtractedSchool, type SchoolEmail, type SchoolItem, type SchoolItemType } from './school';
+import { extractSchool, looksLikeSchool, referenceDate, type ExtractedSchool, type SchoolEmail, type SchoolItem, type SchoolItemType } from './school';
 import { formatMoney } from './money';
 import { addCalendarEvent, listManualEvents, logProcessing, regenerateDigest, track } from './store';
 
@@ -29,6 +29,12 @@ export interface SchoolScan {
   sourceRef: string;
   from: string | null;
   subject: string | null;
+  /**
+   * The date every relative expression in this email was measured from. Shown
+   * to the user, because "Friday" means nothing without it and a wrong
+   * reference frame is the one kind of date error that looks entirely correct.
+   */
+  receivedAt: string;
   engine: string;
   extracted: ExtractedSchool;
   planned: PlannedEvent[];
@@ -121,6 +127,7 @@ export async function planSchoolEmail(
     sourceRef,
     from: email.from ?? null,
     subject: email.subject ?? null,
+    receivedAt: referenceDate(email, now).toISOString().slice(0, 10),
   };
 
   if (!looksLikeSchool(email)) {

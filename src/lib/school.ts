@@ -59,7 +59,32 @@ export interface SchoolEmail {
   from?: string;
   subject?: string;
   text?: string;
+  /**
+   * When the email was SENT. Everything relative in it is resolved against
+   * this, never against the moment of reading. A letter posted on 1 September
+   * saying "the trip is on 9 September" means the 9th of that September, and
+   * "on Friday" means the Friday after the 1st — reading it three weeks later
+   * must not move either. Accepts anything `new Date()` understands, which
+   * covers the RFC 2822 form Gmail returns.
+   */
+  date?: string;
   attachments?: ClaudeDocument[];
+}
+
+/**
+ * The date every relative expression in this email is measured from.
+ *
+ * This is the reference frame, and getting it wrong is silent: the dates still
+ * parse, they are just the wrong dates. Falls back to the reading time only
+ * when the email genuinely carries no date.
+ */
+export function referenceDate(email: SchoolEmail, fallback: Date): Date {
+  if (!email.date) return fallback;
+  const parsed = new Date(email.date);
+  if (Number.isNaN(parsed.getTime())) return fallback;
+  // A sent date far in the future is a broken header, not a time machine.
+  if (parsed.getTime() > fallback.getTime() + 2 * 86_400_000) return fallback;
+  return parsed;
 }
 
 // --- Is this even a school email? -------------------------------------------
@@ -112,20 +137,25 @@ const MONTH_DAY_RE = /\b(jan|feb|mar|apr|may|maj|jun|jul|aug|sep|oct|okt|nov|dec
 
 function resolveDayMonth(day: number, month: number, from: Date): string | null {
   if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+  // Anchoring on the SENT date is what makes the year right across a new year:
+  // a letter sent on 20 December saying "5 January" means the January after it,
+  // and resolving that against the reading date would pick the wrong one in
+  // either direction depending on when it happened to be read.
   for (const year of [from.getUTCFullYear(), from.getUTCFullYear() + 1]) {
     const d = new Date(Date.UTC(year, month - 1, day));
     if (d.getUTCMonth() !== month - 1) continue; // e.g. 31 February
-    // A school date a few days behind us is last week's letter, not next year's.
+    // A date a few days before the letter is that week's, not next year's.
     if (d.getTime() >= from.getTime() - 5 * 86_400_000) return d.toISOString().slice(0, 10);
   }
   return null;
 }
 // Weekday-relative phrases are how schools actually write deadlines.
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DAY_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const WEEKDAY_RE = new RegExp(`\\b(?:this|next|on)?\\s*(${WEEKDAYS.join('|')})\\b`, 'i');
 const TIME_RE = /\b([01]?\d|2[0-3])[:.]([0-5]\d)\s*(am|pm)?\b|\b(\d{1,2})\s*(am|pm)\b/i;
 
-/** Resolve "Friday" against today, always forwards. */
+/** Resolve "Friday" against the day the letter went out, always forwards. */
 function nextWeekday(name: string, from: Date): string {
   const target = WEEKDAYS.indexOf(name.toLowerCase());
   const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
@@ -134,7 +164,13 @@ function nextWeekday(name: string, from: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function findDateIn(text: string, now: Date): string | null {
+/**
+ * A date out of one sentence, resolved against the day the email was sent.
+ *
+ * `ref` is deliberately not "now": schools write "9 September" and "on Friday",
+ * and both only mean anything relative to when the letter went out.
+ */
+function findDateIn(text: string, ref: Date): string | null {
   const explicit = text.match(DATE_RE);
   if (explicit) {
     const parsed = parseDateToken(explicit[1]);
@@ -144,18 +180,18 @@ function findDateIn(text: string, now: Date): string | null {
   // whichever Friday comes next.
   const dayMonth = text.match(DAY_MONTH_RE);
   if (dayMonth) {
-    const resolved = resolveDayMonth(Number(dayMonth[1]), MONTH_NAMES[dayMonth[2].slice(0, 3).toLowerCase()], now);
+    const resolved = resolveDayMonth(Number(dayMonth[1]), MONTH_NAMES[dayMonth[2].slice(0, 3).toLowerCase()], ref);
     if (resolved) return resolved;
   }
   const monthDay = text.match(MONTH_DAY_RE);
   if (monthDay) {
-    const resolved = resolveDayMonth(Number(monthDay[2]), MONTH_NAMES[monthDay[1].slice(0, 3).toLowerCase()], now);
+    const resolved = resolveDayMonth(Number(monthDay[2]), MONTH_NAMES[monthDay[1].slice(0, 3).toLowerCase()], ref);
     if (resolved) return resolved;
   }
   const weekday = text.match(WEEKDAY_RE);
-  if (weekday) return nextWeekday(weekday[1], now);
+  if (weekday) return nextWeekday(weekday[1], ref);
   if (/\btomorrow\b|\bimorgon\b/i.test(text)) {
-    const d = new Date(now);
+    const d = new Date(ref);
     d.setUTCDate(d.getUTCDate() + 1);
     return d.toISOString().slice(0, 10);
   }
@@ -284,7 +320,8 @@ const KIT_NOUNS: { match: RegExp; label: string }[] = [
 ];
 
 // Letters open with a paragraph of throat-clearing. The action is what follows.
-const FILLER = /^(?:we (?:are (?:pleased|delighted|writing)|would like) to (?:confirm|inform|advise|let you know)(?: you)?(?: that)?|this is to confirm that|i am writing to (?:confirm|inform|advise)(?: you)?(?: that)?|please (?:note that|be aware that)?|kindly|a reminder that|reminder:|just a reminder,?|(?:all )?(?:children|pupils|students) (?:should|must|will need to|are asked to)|don't forget(?: to)?)\s+/i;
+const SALUTATION = /^(?:dear (?:parents?|carers?|families|all|parents and carers)[,;:]?\s*)+/i;
+const FILLER = /^(?:we (?:are (?:pleased|delighted|writing)|would like) to (?:confirm|inform|advise|let you know)(?: you)?(?: that)?|this is to confirm that|i am writing to (?:confirm|inform|advise)(?: you)?(?: that)?|please (?:note that|be aware that)?|kindly|a reminder that|reminder:|just a reminder,?|(?:all )?(?:children|pupils|students) (?:should|must|will need to|are asked to)|don't forget(?: to)?|the\s+)\s*/i;
 
 // Words too common to count as evidence that a subject describes a sentence.
 const OVERLAP_STOPWORDS = new Set([
@@ -339,7 +376,9 @@ function titleFor(
     return clampWords(ctx.subject.replace(/^(?:re:|fwd:)\s*/i, ''));
   }
 
-  const cleaned = segment.replace(FILLER, '');
+  // Strip the salutation first: many letters run "Dear Parents, the trip is…"
+  // together on one line, and a title starting "Dear Parents" says nothing.
+  const cleaned = segment.replace(SALUTATION, '').replace(FILLER, '');
   const body = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   return clampWords(body);
 }
@@ -349,6 +388,8 @@ export function heuristicExtractSchool(
   children: Child[],
   now: Date = new Date(),
 ): ExtractedSchool {
+  // Every relative date in the letter is measured from the day it was sent.
+  const ref = referenceDate(email, now);
   const blob = `${email.subject ?? ''}\n${email.text ?? ''}`;
   const child = matchChild(blob, children);
 
@@ -371,7 +412,7 @@ export function heuristicExtractSchool(
       }
     }
 
-    const date = findDateIn(segment, now);
+    const date = findDateIn(segment, ref);
 
     // No vocabulary match, but the sentence schedules itself on a day — that is
     // an event regardless of what it happens to be called.
@@ -387,7 +428,7 @@ export function heuristicExtractSchool(
     // inside one sentence loses every departure time there is.
     let time: string | null = null;
     if (!isDue && date) {
-      time = findTimeIn(segment) ?? (i + 1 < lines.length && !findDateIn(lines[i + 1], now)
+      time = findTimeIn(segment) ?? (i + 1 < lines.length && !findDateIn(lines[i + 1], ref)
         ? findTimeIn(lines[i + 1])
         : null);
     }
@@ -462,6 +503,10 @@ Your job is to LOCATE things, not to invent or summarise them.
 - dueDate is when something must be DONE by. eventDate is when something
   HAPPENS. A trip has both; most items have one. Null if the email does not say.
 - Null over guessing. Never infer a date or an amount that is not stated.
+- DATES ARE RELATIVE TO WHEN THE EMAIL WAS SENT, which is given to you. School
+  letters write "9 September" with no year and "on Friday" with no date at all.
+  Resolve both against the SENT date, never against today: a letter sent on 1
+  September saying "the trip is on Friday" means the Friday after 1 September.
 - PRIVACY, and this one is absolute: name a child ONLY if that exact name is in
   the list of this household's children given to you. Never record, quote or
   refer to any other child, parent or family — not in a title, not in a quote.
@@ -520,14 +565,20 @@ interface SchoolToolResult {
 
 const TIME_ONLY = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-async function anthropicExtractSchool(email: SchoolEmail, children: Child[]): Promise<ExtractedSchool> {
+async function anthropicExtractSchool(
+  email: SchoolEmail,
+  children: Child[],
+  now: Date,
+): Promise<ExtractedSchool> {
+  const ref = referenceDate(email, now);
   const roster = children.map((c) => c.name).join(', ') || '(none on file)';
   const { input } = await claudeToolCall<SchoolToolResult>({
     model: EXTRACTION_MODEL,
     maxTokens: 3000,
     system: SCHOOL_SYSTEM,
     user: redactPII(
-      `This household's children: ${roster}\n\n` +
+      `This household's children: ${roster}\n` +
+        `This email was sent on: ${ref.toISOString().slice(0, 10)} (a ${DAY_OF_WEEK[ref.getUTCDay()]})\n\n` +
         `From: ${email.from ?? ''}\nSubject: ${email.subject ?? ''}\n\n${email.text ?? ''}`,
     ),
     documents: email.attachments,
@@ -547,8 +598,8 @@ async function anthropicExtractSchool(email: SchoolEmail, children: Child[]): Pr
 
     // Dates come from the quote where possible, and from the model's own ISO
     // rendering only as a fallback — same reason as bills.
-    const dueDate = firstDate(raw.dueDate, raw.quote, /\b(?:by|before|senast|deadline|due)\b/i);
-    const eventDate = firstDate(raw.eventDate, raw.quote, null);
+    const dueDate = firstDate(raw.dueDate, raw.quote, ref);
+    const eventDate = firstDate(raw.eventDate, raw.quote, ref);
     const eventTime = raw.eventTime && TIME_ONLY.test(raw.eventTime) ? raw.eventTime : null;
 
     let amount: number | null = null;
@@ -596,12 +647,14 @@ async function anthropicExtractSchool(email: SchoolEmail, children: Child[]): Pr
   };
 }
 
-function firstDate(iso: string | null, quote: string, _cue: RegExp | null): string | null {
-  const fromQuote = quote.match(DATE_RE)?.[1];
-  const parsedQuote = fromQuote ? parseDateToken(fromQuote) : null;
+function firstDate(iso: string | null, quote: string, ref: Date): string | null {
+  // The quote is re-read here with the same yearless and weekday handling the
+  // deterministic path uses, so "9 September" in a quote resolves rather than
+  // being discarded for lacking a year.
+  const parsedQuote = findDateIn(quote, ref);
   const parsedIso = iso ? parseDateToken(iso) : null;
-  // Prefer the model's ISO when the quote holds no explicit date (it may have
-  // resolved "next Friday"), but never accept one the quote contradicts.
+  // Prefer what the quote actually says; the model's own ISO fills in when the
+  // quote carries nothing parseable (it may have resolved "the week after").
   if (parsedQuote && parsedIso && parsedQuote !== parsedIso) return parsedQuote;
   return parsedIso ?? parsedQuote;
 }
@@ -630,7 +683,7 @@ export async function extractSchool(
 
   if (process.env.ANTHROPIC_API_KEY) {
     try {
-      result = await anthropicExtractSchool(email, children);
+      result = await anthropicExtractSchool(email, children, now);
       engine = 'anthropic';
     } catch {
       result = heuristicExtractSchool(email, children, now);
