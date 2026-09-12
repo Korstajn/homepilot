@@ -17,9 +17,35 @@ export type BillType =
 // Insurance is intentionally excluded — regulated activity (see docs/DECISIONS.md §3).
 export const EXECUTABLE_BILL_TYPES: BillType[] = ['broadband', 'energy', 'mobile'];
 
+// The period a price was quoted for. Extraction must not assume "monthly":
+// a quarterly or annual total read as a monthly charge is how a £186 quarterly
+// bill turned into a fabricated four-figure saving.
+export type BillingPeriod = 'monthly' | 'quarterly' | 'annual' | 'one_off';
+
+// Where a single field's value came from, in descending reliability. Kept
+// per-field rather than per-bill because one bill routinely mixes them: a
+// provider read from the sender, an amount read from schema.org markup, a
+// renewal date a model found in prose.
+export type EvidenceSource = 'json-ld' | 'table' | 'model' | 'heuristic' | 'manual' | 'seed';
+
+export interface FieldEvidence {
+  source: EvidenceSource;
+  /**
+   * The exact source text the value was read from — never a paraphrase, and
+   * never the model's own rendering of the number. Values are re-parsed from
+   * this string, so it is both the audit trail and the input.
+   */
+  quote: string;
+}
+
+export type BillEvidence = Partial<Record<'amount' | 'renewalDate' | 'provider', FieldEvidence>>;
+
 export type UrgencyBand = 'today' | 'soon' | 'upcoming';
 
-export type DigestItemCategory = 'bill' | 'school' | 'travel' | 'system';
+// 'home' covers household logistics that are neither a bill nor a school or
+// travel matter — an appointment, an evening out that needs cover. Without it
+// every calendar-derived item had to be mislabelled to fit the contract.
+export type DigestItemCategory = 'bill' | 'school' | 'travel' | 'home' | 'system';
 
 // Connection state for the forward-to-GiGi mechanism (no OAuth in beta).
 export type ConnectionStatus = 'pending' | 'active' | 'degraded';
@@ -78,7 +104,18 @@ export interface CalendarEvent {
   alarmMinutesBefore?: number;
   source: 'manual' | 'derived'; // derived = generated from bills/children
   relatedChildId?: string;
+  // The message this event was created from, e.g. 'gmail:<id>#0'. Checked
+  // before creating, so re-scanning an inbox cannot duplicate what it found
+  // last time.
+  sourceRef?: string;
+  // The exact sentence the event was read out of, when it came from an email.
+  // Shown to the user: "we read this from that" is what makes a wrong date
+  // correctable rather than mysterious.
+  evidence?: FieldEvidence;
   createdAt: string;
+  // When the event last changed. Drives LAST-MODIFIED in the ICS feed so a
+  // subscriber can tell a real edit from a re-fetch of the same event.
+  updatedAt?: string;
 }
 
 // A child profile (no login): used to associate school emails and travel/
@@ -124,9 +161,22 @@ export interface Bill {
   householdId: string;
   provider: string;
   type: BillType;
-  amount: number | null; // null over guessing
+  amount: number | null; // MONTHLY charge as stated. null over guessing.
+  // The figure exactly as the bill stated it, with `billingPeriod` saying which
+  // period it covers. An annual premium is kept here rather than silently
+  // divided by twelve into `amount`.
+  sourceAmount?: number | null;
   currency: Currency;
   renewalDate: string | null; // ISO date, null over guessing
+  // The period the source actually stated, before normalising to monthly.
+  // Absent means the email never said, in which case `amount` is null rather
+  // than a number we assumed was per month.
+  billingPeriod?: BillingPeriod;
+  // Next payment due, when the source gave one. Distinct from renewalDate:
+  // paying this month is not the same event as the contract ending.
+  paymentDueDate?: string | null;
+  // What each extracted value was read from, and the exact text it came from.
+  evidence?: BillEvidence;
   priceIncreaseFlag: boolean;
   // How the bill entered the register — matters for the accuracy story.
   source: 'extracted' | 'manual' | 'seed';
@@ -263,7 +313,7 @@ export interface ProcessingEvent {
   householdId: string;
   at: string; // ISO timestamp
   action: ProcessingAction;
-  category: 'bill' | 'digest' | 'account' | 'system';
+  category: 'bill' | 'school' | 'digest' | 'account' | 'system';
   actor: ProcessingActor;
   // Plain-language, metadata only (may name a provider/category — never amounts
   // or email content).

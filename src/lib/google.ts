@@ -27,6 +27,7 @@
  */
 
 import { seal, unseal } from './secrets';
+import { htmlToText, extractStructuredInvoice, type StructuredInvoice } from './email-content';
 
 export const GMAIL_COOKIE = 'gigi_gmail';
 export const OAUTH_STATE_COOKIE = 'gigi_oauth_state';
@@ -318,6 +319,21 @@ export function buildGmailQuery(opts: { terms?: string; days: number }): string 
 /** The default search GiGi would use, built through the same guards. */
 export const DEFAULT_GMAIL_QUERY = buildGmailQuery({ days: 60 });
 
+/**
+ * School-hunting terms.
+ *
+ * Deliberately narrower than the bill terms and aimed at SENDERS and school
+ * vocabulary rather than at generic words: "trip" and "form" on their own match
+ * half an inbox. Swedish included because the second market is Sweden.
+ */
+export const SCHOOL_TERMS = [
+  'school OR academy OR nursery OR preschool OR "class teacher"',
+  'OR parentpay OR parentmail OR classdojo OR seesaw OR arbor OR satchel',
+  'OR "parents evening" OR "school trip" OR "permission slip" OR "consent form"',
+  'OR "PE kit" OR "inset day" OR "half term" OR homework',
+  'OR skola OR förskola OR fritids OR föräldramöte OR skolresa OR utvecklingssamtal',
+].join(' ');
+
 async function listMessageIds(
   accessToken: string,
   query: string,
@@ -414,6 +430,12 @@ export interface MessageContent {
   subject: string | null;
   date: string | null;
   text: string;
+  /**
+   * schema.org billing data the sender published, when there was any. Read
+   * BEFORE the HTML is flattened, because flattening destroys it — and it is
+   * the most reliable statement of the amount and dates in the whole message.
+   */
+  structured: StructuredInvoice | null;
   attachments: MessageAttachment[];
   /** PDFs found but skipped (too large, or past the per-message cap). */
   skippedAttachments: number;
@@ -422,27 +444,6 @@ export interface MessageContent {
 /** Gmail encodes body and attachment payloads base64url, without padding. */
 function decodeB64Url(data: string): Buffer {
   return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
-}
-
-/**
- * Crude but sufficient HTML → text. Billing emails are overwhelmingly HTML, and
- * the extractor wants prose, not markup: script/style content is noise that
- * would otherwise dominate the token budget and bury the amount.
- */
-function htmlToText(html: string): string {
-  return html
-    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|tr|h[1-6]|li)>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
 }
 
 interface GmailPart {
@@ -533,8 +534,14 @@ export async function fetchMessageContent(
   const acc = { plain: [] as string[], html: [] as string[], pdfs: [] as { id: string; filename: string; size: number }[] };
   walkParts(msg.payload, acc);
 
-  const body = acc.plain.length ? acc.plain.join('\n\n') : htmlToText(acc.html.join('\n\n'));
-  const text = (body || msg.snippet || '').slice(0, MAX_BODY_CHARS);
+  const html = acc.html.join('\n\n');
+  const structured = html ? extractStructuredInvoice(html) : null;
+  // The HTML part is preferred over text/plain when there is one: its table
+  // structure survives as "label | value", which is exactly what says which of
+  // the six numbers on the page is the monthly charge. The plain part has
+  // already thrown that away.
+  const body = html ? htmlToText(html) : acc.plain.join('\n\n');
+  const text = (body || acc.plain.join('\n\n') || msg.snippet || '').slice(0, MAX_BODY_CHARS);
 
   const wanted = acc.pdfs.filter((p) => p.size <= MAX_PDF_BYTES).slice(0, MAX_PDFS_PER_MESSAGE);
   const attachments: MessageAttachment[] = [];
@@ -549,6 +556,7 @@ export async function fetchMessageContent(
     subject: header('subject'),
     date: header('date'),
     text,
+    structured,
     attachments,
     skippedAttachments: acc.pdfs.length - attachments.length,
   };

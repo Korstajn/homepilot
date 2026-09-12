@@ -77,9 +77,17 @@ create table calendar_events (
   alarm_minutes_before int,
   source               text not null default 'manual' check (source in ('manual','derived')),
   related_child_id     uuid references children(id) on delete set null,
-  created_at           timestamptz not null default now()
+  -- The message this event came from ('gmail:<id>#0'), so a re-scan cannot
+  -- duplicate it, plus the sentence it was read out of.
+  source_ref           text,
+  evidence             jsonb,
+  created_at           timestamptz not null default now(),
+  -- Drives LAST-MODIFIED in the ICS feed, so a subscriber can tell a real edit
+  -- from a re-fetch of an unchanged event.
+  updated_at           timestamptz not null default now()
 );
 create index on calendar_events (household_id);
+create unique index on calendar_events (household_id, source_ref) where source_ref is not null;
 -- households.calendar_token holds the secret, revocable ICS-feed token:
 alter table households add column if not exists calendar_token text unique;
 
@@ -90,9 +98,20 @@ create table bills (
   provider            text not null,
   type                text not null default 'other'
                         check (type in ('broadband','energy','mobile','tv','insurance','other')),
-  amount              numeric(10,2),           -- null over guessing
+  amount              numeric(10,2),           -- MONTHLY charge; null over guessing
+  -- The figure exactly as the bill stated it, with billing_period saying which
+  -- period it covers. An annual premium is kept here rather than divided by 12
+  -- into `amount` — that division is an inference, not arithmetic we can state.
+  source_amount       numeric(10,2),
+  billing_period      text check (billing_period in ('monthly','quarterly','annual','one_off')),
   currency            text not null default 'GBP',
   renewal_date        date,                    -- null over guessing (ISO)
+  -- Next payment due. Deliberately separate from renewal_date: paying this
+  -- month is not the same event as the contract ending.
+  payment_due_date    date,
+  -- Per-field provenance: {"amount":{"source":"json-ld","quote":"GBP62.00"}}.
+  -- What each value was read from, and the exact text it came from.
+  evidence            jsonb,
   price_increase_flag boolean not null default false,
   source              text not null default 'extracted'
                         check (source in ('extracted','manual','seed')),

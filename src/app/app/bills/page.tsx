@@ -123,10 +123,20 @@ export default function BillsRegister() {
                 <span className="badge-cat">{b.type}</span>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700 }}>{formatMoney(b.amount, currency)}<span className="tiny muted">/mo</span></div>
+                {b.amount === null ? (
+                  <div className="small muted" style={{ fontWeight: 600 }}>amount not read</div>
+                ) : (
+                  <div style={{ fontWeight: 700 }}>{formatMoney(b.amount, currency)}<span className="tiny muted">/mo</span></div>
+                )}
                 {b.renewalDate && <span className="tiny muted">renews {b.renewalDate}</span>}
               </div>
             </div>
+
+            {/* Where each number came from, in the user's words. "We read £62
+                from the line 'Monthly charge'" is a different thing to trust
+                than a bare figure, and it is what makes a correction possible. */}
+            <Provenance bill={b} />
+
             <div className="row between" style={{ marginTop: 10 }}>
               <div className="row" style={{ gap: 6 }}>
                 {b.priceIncreaseFlag && <span className="pill accent">↑ rising</span>}
@@ -159,6 +169,42 @@ export default function BillsRegister() {
       )}
 
       {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+const SOURCE_WORDS: Record<string, string> = {
+  'json-ld': 'published by the sender',
+  table: 'from the bill table',
+  model: 'read by GiGi’s AI',
+  heuristic: 'read on our server',
+  manual: 'you entered it',
+  seed: 'example data',
+};
+
+function Provenance({ bill }: { bill: Bill }) {
+  const rows = [
+    bill.evidence?.amount ? { field: 'Amount', ev: bill.evidence.amount } : null,
+    bill.evidence?.renewalDate ? { field: 'Renewal', ev: bill.evidence.renewalDate } : null,
+  ].filter((r): r is { field: string; ev: NonNullable<Bill['evidence']>['amount'] & object } => r !== null);
+
+  const missingAmount = bill.amount === null && bill.source === 'extracted';
+  if (rows.length === 0 && !missingAmount) return null;
+
+  return (
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+      {rows.map((r) => (
+        <p key={r.field} className="tiny muted" style={{ margin: '0 0 2px' }}>
+          {r.field} · {SOURCE_WORDS[r.ev.source] ?? r.ev.source} · “{r.ev.quote}”
+        </p>
+      ))}
+      {missingAmount && (
+        <p className="tiny muted" style={{ margin: 0 }}>
+          {bill.billingPeriod
+            ? 'The amount could not be read confidently — add it below.'
+            : 'The email gave a figure but never said what period it covered, so GiGi left it blank rather than assuming a month.'}
+        </p>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveInboundHousehold } from '@/lib/store';
 import { ingestEmail } from '@/lib/ingest';
+import { parseEmailHtml } from '@/lib/email-content';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,14 +43,25 @@ export async function POST(req: Request) {
   const from = pick(body, ['from', 'sender', 'From', 'FromFull']);
   const recipient = pick(body, ['to', 'recipient', 'To', 'OriginalRecipient', 'ToFull']);
   const subject = pick(body, ['subject', 'Subject']);
-  const text = pick(body, ['text', 'body-plain', 'stripped-text', 'TextBody', 'plain', 'body']);
+  const plain = pick(body, ['text', 'body-plain', 'stripped-text', 'TextBody', 'plain', 'body']);
+  // Inbound services send both parts. The HTML one is worth more: it carries the
+  // sender's schema.org markup and its table structure, and the plain part has
+  // already discarded both. Taking only `text` was throwing the good copy away.
+  const html = pick(body, ['html', 'body-html', 'stripped-html', 'HtmlBody', 'html-body']);
+  const parsed = html ? parseEmailHtml(html) : null;
+  const text = parsed?.text || plain;
 
   if (!subject && !text) {
     return NextResponse.json({ error: 'No email content found in payload' }, { status: 400 });
   }
 
   const household = resolveInboundHousehold(recipient, from);
-  const { engine, extracted, bill } = await ingestEmail(household, { from, subject, text });
+  const { engine, extracted, bill } = await ingestEmail(household, {
+    from,
+    subject,
+    text,
+    structured: parsed?.structured ?? null,
+  });
 
   return NextResponse.json({ ok: true, engine, householdId: household.id, extracted, billId: bill.id });
 }

@@ -1,4 +1,4 @@
-import { findCalendarEvent } from '@/lib/calendar';
+import { householdCalendarEvent } from '@/lib/store';
 import { resolveHousehold, resolveMember, can } from '@/lib/auth';
 import { toICS } from '@/lib/ics';
 
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const hh = resolveHousehold();
   const finance = can(resolveMember().role, 'viewFinances');
   const id = new URL(req.url).searchParams.get('id') ?? '';
-  const ev = findCalendarEvent(hh.id, id);
+  const ev = householdCalendarEvent(hh.id, id);
   if (!ev || (!finance && ev.category === 'bill')) {
     return new Response('Not found', { status: 404 });
   }

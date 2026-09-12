@@ -120,12 +120,22 @@ export function currentSessionHouseholdId(): string | null {
 }
 
 // --- Capabilities ------------------------------------------------------------
-export type Capability = 'manageMembers' | 'approve' | 'manageBills' | 'viewFinances' | 'forward';
+export type Capability =
+  | 'manageMembers'
+  | 'approve'
+  | 'manageBills'
+  | 'viewFinances'
+  // The family calendar is shared property. Adding your own football practice
+  // is not a financial act, and gating it on `viewFinances` — as the calendar
+  // routes did — meant a teen could not put anything in the household calendar
+  // at all, in a product whose whole promise is the household in one place.
+  | 'manageCalendar'
+  | 'forward';
 
 const CAPS: Record<MemberRole, Capability[]> = {
-  owner: ['manageMembers', 'approve', 'manageBills', 'viewFinances', 'forward'],
-  adult: ['approve', 'manageBills', 'viewFinances', 'forward'], // co-parent
-  teen: [], // limited view: no finances, no execution, no management
+  owner: ['manageMembers', 'approve', 'manageBills', 'viewFinances', 'manageCalendar', 'forward'],
+  adult: ['approve', 'manageBills', 'viewFinances', 'manageCalendar', 'forward'], // co-parent
+  teen: ['manageCalendar'], // limited view: no finances, no execution, no management
 };
 
 export function can(role: MemberRole, cap: Capability): boolean {

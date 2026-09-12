@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { trackClient } from '@/lib/analytics';
 import CommandBar from '@/components/CommandBar';
 import ScreenHeader from '@/components/ScreenHeader';
+import SchoolScanner from '@/components/SchoolScanner';
 import type { Child, Digest, DigestItem } from '@/lib/types';
 
 export default function KidsTravel() {
   const [children, setChildren] = useState<Child[]>([]);
   const [items, setItems] = useState<DigestItem[]>([]);
   const [filter, setFilter] = useState<string>('all');
+  const [scanning, setScanning] = useState(false);
 
   async function load() {
     const [m, d] = await Promise.all([
@@ -58,6 +60,21 @@ export default function KidsTravel() {
           </div>
         </div>
       ))}
+
+      {scanning ? (
+        <div style={{ marginBottom: 14 }}>
+          <SchoolScanner onCreated={() => { setScanning(false); load(); }} />
+          <button className="btn btn-ghost" style={{ marginTop: 10 }} onClick={() => setScanning(false)}>Close</button>
+        </div>
+      ) : (
+        <button
+          className="btn btn-ghost"
+          style={{ marginTop: 4 }}
+          onClick={() => { setScanning(true); trackClient('school_scanner_opened'); }}
+        >
+          Find school dates in an email
+        </button>
+      )}
 
       <p className="eyebrow" style={{ margin: '14px 0 10px' }}>This week</p>
       {shown.length === 0 ? (
