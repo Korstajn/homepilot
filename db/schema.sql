@@ -77,12 +77,17 @@ create table calendar_events (
   alarm_minutes_before int,
   source               text not null default 'manual' check (source in ('manual','derived')),
   related_child_id     uuid references children(id) on delete set null,
+  -- The message this event came from ('gmail:<id>#0'), so a re-scan cannot
+  -- duplicate it, plus the sentence it was read out of.
+  source_ref           text,
+  evidence             jsonb,
   created_at           timestamptz not null default now(),
   -- Drives LAST-MODIFIED in the ICS feed, so a subscriber can tell a real edit
   -- from a re-fetch of an unchanged event.
   updated_at           timestamptz not null default now()
 );
 create index on calendar_events (household_id);
+create unique index on calendar_events (household_id, source_ref) where source_ref is not null;
 -- households.calendar_token holds the secret, revocable ICS-feed token:
 alter table households add column if not exists calendar_token text unique;
 

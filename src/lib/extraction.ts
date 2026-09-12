@@ -241,14 +241,15 @@ function toISO(y: number, m: number, d: number): string | null {
   return dt.toISOString().slice(0, 10);
 }
 
-const DATE_FORMS = [
+export const DATE_FORMS = [
   String.raw`\d{4}-\d{2}-\d{2}`,
   String.raw`\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}`,
   String.raw`\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-zÅÄÖåäö]{3,9}\.?\s+\d{4}`,
   String.raw`[A-Za-zÅÄÖåäö]{3,9}\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}`,
 ].join('|');
 
-function parseDateToken(token: string): string | null {
+/** One date token in any form GiGi understands, or null. Shared with school extraction. */
+export function parseDateToken(token: string): string | null {
   const s = token.trim();
   let m: RegExpMatchArray | null;
 

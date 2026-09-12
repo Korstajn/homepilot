@@ -65,6 +65,51 @@ what makes "null over guessing" a property of the code rather than a line here.
 }
 ```
 
+**Output shape (school)** — `src/lib/school.ts`, one email to a list of things
+a parent has to do:
+
+```json
+{
+  "kind": "school",
+  "school": "string | null",
+  "child_name": "string | null",
+  "items": [
+    {
+      "type": "form | payment | kit | event | absence",
+      "title": "action-first, ≤10 words",
+      "due_date": "YYYY-MM-DD | null",
+      "event_date": "YYYY-MM-DD | null",
+      "event_time": "HH:MM | null",
+      "amount": "number | null",
+      "evidence": { "source": "model | heuristic", "quote": "the exact sentence" }
+    }
+  ],
+  "ignored_for_privacy": "number",
+  "confidence": "number 0-1"
+}
+```
+
+`due_date` and `event_date` are different facts: a trip has a form due one week
+and a coach leaving the next. A school date written without a year ("Thursday 8
+October") resolves forward — unlike a bill's renewal date, a school date with no
+year is unambiguously the next one.
+
+**The privacy rule is enforced in code, not in the prompt.** A school email is
+full of other families' children — class lists, "well done to", quoted parent
+replies — and an instruction to a model is a mitigation, not a guarantee. So:
+
+- the only names GiGi ever looks for are children the household has already
+  entered, so a name it does not know is a name it cannot record;
+- and because the evidence quote stores the SENTENCE, any sentence naming a
+  child who is not in this household is dropped whole, on both the model and the
+  deterministic path. `ignored_for_privacy` counts them and the count is shown to
+  the user; nothing else about them is kept.
+
+**Nothing is created without a tap.** A school scan reads and PLANS: it returns
+what it read, which child it matched, what it would put in the calendar and the
+sentence behind each value, and writes nothing. A second call creates only the
+items the household ticked, and only from the plan the server itself produced.
+
 **Eval gate before launch:** hand-label ≥200 real bill emails; measure precision
 and recall per field; gate P0 on **≥95% precision on amount and renewal_date**,
 null-rate reported separately.

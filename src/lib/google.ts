@@ -319,6 +319,21 @@ export function buildGmailQuery(opts: { terms?: string; days: number }): string 
 /** The default search GiGi would use, built through the same guards. */
 export const DEFAULT_GMAIL_QUERY = buildGmailQuery({ days: 60 });
 
+/**
+ * School-hunting terms.
+ *
+ * Deliberately narrower than the bill terms and aimed at SENDERS and school
+ * vocabulary rather than at generic words: "trip" and "form" on their own match
+ * half an inbox. Swedish included because the second market is Sweden.
+ */
+export const SCHOOL_TERMS = [
+  'school OR academy OR nursery OR preschool OR "class teacher"',
+  'OR parentpay OR parentmail OR classdojo OR seesaw OR arbor OR satchel',
+  'OR "parents evening" OR "school trip" OR "permission slip" OR "consent form"',
+  'OR "PE kit" OR "inset day" OR "half term" OR homework',
+  'OR skola OR förskola OR fritids OR föräldramöte OR skolresa OR utvecklingssamtal',
+].join(' ');
+
 async function listMessageIds(
   accessToken: string,
   query: string,

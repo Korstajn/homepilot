@@ -23,6 +23,25 @@ is to surface a thing while there is still time to act on it:
 Adding or editing an event regenerates the digest immediately rather than
 waiting for the nightly run, so the screen and the digest never disagree.
 
+## School email into the calendar (P0 — built)
+
+`/app/kids` → **Find school dates in an email** runs the school extractor
+(`src/lib/school.ts`) over either a pasted email or the connected Gmail, and
+shows its working before it writes anything:
+
+- what it read, and whether the AI or the server read it
+- which child it matched, and how many lines about other families' children it
+  ignored
+- every date it would create, the reason, and the exact sentence behind it
+- what it found but could not place, rather than dropping it silently
+
+The household ticks what is right; only then are events created. Re-scanning the
+same message creates nothing twice — each event records the message it came from
+(`sourceRef`).
+
+The paste path exists so this is testable with no OAuth, no verification and no
+waiting: the same pipeline, a different way in.
+
 ## What the model holds
 
 Events carry a time (not only a date), an optional `rrule` for the recurring

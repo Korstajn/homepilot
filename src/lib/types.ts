@@ -104,6 +104,14 @@ export interface CalendarEvent {
   alarmMinutesBefore?: number;
   source: 'manual' | 'derived'; // derived = generated from bills/children
   relatedChildId?: string;
+  // The message this event was created from, e.g. 'gmail:<id>#0'. Checked
+  // before creating, so re-scanning an inbox cannot duplicate what it found
+  // last time.
+  sourceRef?: string;
+  // The exact sentence the event was read out of, when it came from an email.
+  // Shown to the user: "we read this from that" is what makes a wrong date
+  // correctable rather than mysterious.
+  evidence?: FieldEvidence;
   createdAt: string;
   // When the event last changed. Drives LAST-MODIFIED in the ICS feed so a
   // subscriber can tell a real edit from a re-fetch of the same event.
@@ -305,7 +313,7 @@ export interface ProcessingEvent {
   householdId: string;
   at: string; // ISO timestamp
   action: ProcessingAction;
-  category: 'bill' | 'digest' | 'account' | 'system';
+  category: 'bill' | 'school' | 'digest' | 'account' | 'system';
   actor: ProcessingActor;
   // Plain-language, metadata only (may name a provider/category — never amounts
   // or email content).
