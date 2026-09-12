@@ -30,6 +30,7 @@ import type {
   ContactMessage,
 } from './types';
 import { buildDigest } from './digest';
+import { buildCalendar, findCalendarEvent } from './calendar';
 import { DEFAULT_HANDED_OVER } from './handover';
 import { devCalendarToken, devIds, devPassword, devPasswordHash, devUserSpecs } from './dev-users';
 
@@ -193,7 +194,20 @@ function seed(): DB {
   };
 
   // Generate today's digest for the demo household so the app has something live.
-  db.digests.push(buildDigest(household, bills, db.actions));
+  db.digests.push(
+    buildDigest(
+      household,
+      bills,
+      db.actions,
+      buildCalendar({
+        householdId,
+        bills,
+        children: db.children,
+        manualEvents: db.calendarEvents,
+      }),
+      db.children,
+    ),
+  );
   db.events.push({
     id: id('evt'),
     householdId,
@@ -631,9 +645,28 @@ export function listManualEvents(householdId: string): CalendarEvent[] {
 }
 
 export function addCalendarEvent(input: Omit<CalendarEvent, 'id' | 'createdAt' | 'source'>): CalendarEvent {
-  const ev: CalendarEvent = { ...input, id: 'cal_' + id('e'), source: 'manual', createdAt: iso() };
+  const now = iso();
+  const ev: CalendarEvent = { ...input, id: 'cal_' + id('e'), source: 'manual', createdAt: now, updatedAt: now };
   getDB().calendarEvents.push(ev);
   return ev;
+}
+
+/**
+ * Edit a manual event. Returns undefined for anything that is not one — a
+ * derived event is a projection of a bill or a child, so editing it here would
+ * silently drift from the record it came from.
+ */
+export function updateCalendarEvent(
+  householdId: string,
+  eventId: string,
+  patch: Partial<Omit<CalendarEvent, 'id' | 'householdId' | 'createdAt' | 'source'>>,
+): CalendarEvent | undefined {
+  const existing = getDB().calendarEvents.find(
+    (e) => e.id === eventId && e.householdId === householdId,
+  );
+  if (!existing) return undefined;
+  Object.assign(existing, patch, { updatedAt: iso() });
+  return existing;
 }
 
 export function deleteCalendarEvent(householdId: string, eventId: string): boolean {
@@ -774,13 +807,43 @@ export function listDigests(householdId: string): Digest[] {
 }
 
 // Simulates the 02:00 nightly Inngest run for one household.
+/**
+ * A household's full calendar: manual events plus everything derived from the
+ * rest of the app. Lives here rather than in calendar.ts so that module can stay
+ * free of store imports — the store depends on it, not the other way round.
+ */
+export function householdCalendar(householdId: string, includeFinance = true): CalendarEvent[] {
+  return buildCalendar({
+    householdId,
+    bills: listBills(householdId),
+    children: listChildren(householdId),
+    manualEvents: listManualEvents(householdId),
+    includeFinance,
+  });
+}
+
+/** One event by id, across the full range rather than the display window. */
+export function householdCalendarEvent(householdId: string, eventId: string): CalendarEvent | undefined {
+  return findCalendarEvent(
+    {
+      householdId,
+      bills: listBills(householdId),
+      children: listChildren(householdId),
+      manualEvents: listManualEvents(householdId),
+    },
+    eventId,
+  );
+}
+
 export function regenerateDigest(householdId: string): Digest | undefined {
   const db = getDB();
   const household = getHousehold(householdId);
   if (!household) return undefined;
   const bills = listBills(householdId);
   const actions = db.actions.filter((a) => a.householdId === householdId);
-  const fresh = buildDigest(household, bills, actions);
+  // Events and children are signals, not decoration: without them the digest
+  // can only ever talk about bills.
+  const fresh = buildDigest(household, bills, actions, householdCalendar(householdId), listChildren(householdId));
   const today = isoDate();
   const existingIdx = db.digests.findIndex(
     (d) => d.householdId === householdId && d.date === today,

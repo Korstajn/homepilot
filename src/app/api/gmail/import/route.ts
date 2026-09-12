@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
           from: content.from ?? undefined,
           subject: content.subject ?? undefined,
           text: content.text,
+          structured: content.structured,
           attachments: content.attachments.map((a) => ({ mediaType: a.mediaType, data: a.data })),
         },
         'gmail',

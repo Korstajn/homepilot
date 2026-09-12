@@ -91,6 +91,44 @@ path exists, and none can while the token lives in the user's cookie), capped at
 extracted lands **unconfirmed**. **The DPIA must be extended before this is
 offered beyond a closed beta** — this amendment records what it has to cover.
 
+## Extraction rebuilt around evidence (amended)
+
+The first extractor was measured against realistic billing text and got **one
+case in ten right**. The failures were not tuning problems, they were structural:
+
+- `[0-9]+(?:[.,][0-9]{1,2})?` cannot express a thousands separator, so
+  `£1,234.56` parsed as **1.23**.
+- `text.match()` without `/g` over `subject + from + body` took the FIRST
+  currency token, which in a real billing email is a marketing line or a zero
+  balance, not the charge. "Save £5 … your monthly price is £62.00" gave **5**.
+- The monthly qualifier had to FOLLOW the amount, but UK bills write
+  "Monthly charge: £62.00" — label first — so that branch never fired.
+- Currency detection picked the wrong capture group in the number-first branch,
+  so **every SEK amount was labelled GBP**; `$` mapped to GBP outright; `€`
+  returned null.
+- A quarterly or annual total was stored as a monthly charge and then multiplied
+  by twelve by the savings estimate.
+- `findDate` fell back to "any date in the body" — the send date, a footer date
+  — which is precisely the guessing the contract forbids.
+
+Two more were worse for being invisible, and only affected the AI path — the one
+the product actually ships:
+
+- **`redactPII` destroyed ISO dates before inference.** Its phone pattern
+  matched `2027-03-14`, so renewal dates reached the model as `[phone]`.
+- **`htmlToText` deleted the machine-readable answer.** Stripping `<script>`
+  removed the sender's schema.org `Invoice` markup — exact amount, exact due
+  date — and then asked a model to infer both from the remaining prose.
+
+**Build choice:** extraction is now a cascade (schema.org markup → a scored read
+of the document → the model) behind one validation gate, and the model is asked
+to **locate and quote** values rather than transcribe them, with every quote
+re-parsed in code. Amounts are never divided into a monthly figure they did not
+state, and a currency outside the household's market is withheld rather than
+relabelled. Every value carries its source and the exact text it came from, and
+that provenance is shown to the user. The eval set carries each failure above as
+a regression case.
+
 ## Product-logic contradictions resolved
 
 - **Silent assistant can't build a habit** → **minimum mode.** A quiet day still

@@ -12,8 +12,11 @@
 
 import {
   Bill,
+  CalendarEvent,
+  Child,
   Digest,
   DigestItem,
+  DigestItemCategory,
   EXECUTABLE_BILL_TYPES,
   Household,
   ActionLog,
@@ -27,7 +30,11 @@ function id(prefix: string): string {
 }
 
 function daysUntil(isoDateStr: string): number {
-  const target = new Date(isoDateStr + 'T00:00:00');
+  // Take the date part only. Bills carry a date, but a calendar event may carry
+  // a full timestamp — appending 'T00:00:00' to one produced an Invalid Date,
+  // and NaN silently fails every comparison, so timed events could never reach
+  // the digest at all.
+  const target = new Date(isoDateStr.slice(0, 10) + 'T00:00:00');
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - now.getTime()) / 86_400_000);
@@ -62,10 +69,132 @@ function estimateSaving(bill: Bill): { newPrice: number; savingAnnual: number } 
   return { newPrice: Math.round(monthlyNew), savingAnnual };
 }
 
+/** The calendar categories that become digest items, and what they surface as. */
+const EVENT_CATEGORY: Record<CalendarEvent['category'], DigestItemCategory> = {
+  school: 'school',
+  travel: 'travel',
+  bill: 'bill',
+  appointment: 'home',
+  other: 'home',
+};
+
+function startHour(event: CalendarEvent): number | null {
+  if (event.allDay || !event.start.includes('T')) return null;
+  const d = new Date(event.start);
+  return Number.isNaN(d.getTime()) ? null : d.getHours();
+}
+
+function monthsBetween(fromISO: string, toISO: string): number {
+  const a = new Date(fromISO.slice(0, 10) + 'T00:00:00Z');
+  const b = new Date(toISO.slice(0, 10) + 'T00:00:00Z');
+  return (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
+}
+
+/**
+ * Turn the household calendar into digest signals.
+ *
+ * This is the connection the build was missing. `buildDigest` took bills and
+ * actions only, so the `school` and `travel` categories in the contract could
+ * never be produced by anything — the whole of vertical 3 (pre-event nudges,
+ * cover for an evening out, trip preparation) had no code path, and the
+ * calendar was a screen rather than a source of signals.
+ *
+ * Each rule is a LEAD TIME, not a reminder: the point is to surface the thing
+ * while there is still time to act on it.
+ */
+function calendarItems(
+  household: Household,
+  events: CalendarEvent[],
+  children: Child[],
+  now: string,
+): DigestItem[] {
+  const items: DigestItem[] = [];
+  const base = { status: 'open' as const, firstSurfacedAt: now, carryForwardCount: 0 };
+  const hasChildren = household.children !== 'none' || children.length > 0;
+  const passportHandled = new Set<string>();
+
+  for (const ev of events) {
+    const days = daysUntil(ev.start);
+    if (days < 0) continue;
+
+    // 1) A trip puts every child's passport on the clock. Six months of validity
+    //    beyond the trip is the common entry requirement, so that is the window
+    //    worth warning about — early enough that renewing is still possible.
+    if (ev.category === 'travel' && days <= 90) {
+      for (const child of children) {
+        if (!child.passportExpiry) continue;
+        if (monthsBetween(ev.start, child.passportExpiry) < 6) {
+          passportHandled.add(child.id);
+          items.push({
+            ...base,
+            id: id('item'),
+            category: 'travel',
+            urgency: bandFor(days),
+            line: clampWords(`Renew ${child.name}'s passport before the trip`),
+            detail: `${child.name}'s passport expires ${child.passportExpiry}, which is inside the six months most countries require beyond your return. The trip is in ${days} days.`,
+            executable: false,
+          });
+        }
+      }
+    }
+
+    // 2) An evening out with children at home needs cover arranged, and that is
+    //    a week's notice job, not a same-day one.
+    const hour = startHour(ev);
+    if (hasChildren && hour !== null && hour >= 17 && days <= 7 && ev.category !== 'school') {
+      items.push({
+        ...base,
+        id: id('item'),
+        category: 'home',
+        urgency: bandFor(days),
+        line: clampWords(`Arrange cover for ${ev.summary}`),
+        detail: `${ev.summary} starts at ${ev.start.slice(11, 16)} in ${days} day${days === 1 ? '' : 's'}. Nobody is down as being home.`,
+        executable: false,
+      });
+      continue;
+    }
+
+    // 3) Everything else surfaces the evening before it matters, which is when
+    //    a form can still be signed or a kit bag still packed.
+    if (days <= 2) {
+      items.push({
+        ...base,
+        id: id('item'),
+        category: EVENT_CATEGORY[ev.category],
+        urgency: days <= 1 ? 'today' : 'soon',
+        line: clampWords(ev.summary),
+        detail: ev.description ?? (days === 0 ? 'Today.' : `In ${days} day${days === 1 ? '' : 's'}.`),
+        executable: false,
+      });
+    }
+  }
+
+  // 4) A passport running out is worth saying even with no trip booked, because
+  //    the renewal takes longer than most people expect.
+  for (const child of children) {
+    if (!child.passportExpiry || passportHandled.has(child.id)) continue;
+    const days = daysUntil(child.passportExpiry);
+    if (days < 0 || days > 120) continue;
+    items.push({
+      ...base,
+      id: id('item'),
+      category: 'travel',
+      urgency: bandFor(days),
+      line: clampWords(`Renew ${child.name}'s passport`),
+      detail: `It expires in ${days} days. Renewals routinely take six weeks.`,
+      executable: false,
+    });
+  }
+
+  return items;
+}
+
 export function buildDigest(
   household: Household,
   bills: Bill[],
   actions: ActionLog[],
+  events: CalendarEvent[] = [],
+  children: Child[] = [],
 ): Digest {
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
@@ -156,6 +285,9 @@ export function buildDigest(
     }
   }
 
+  // 2b) The calendar — school, travel and home logistics.
+  items.push(...calendarItems(household, events, children, now));
+
   // Drop anything the user already resolved.
   const open = items.filter((i) => !resolvedItemKeys.has(i.id));
   open.sort((a, b) => priorityScore(a) - priorityScore(b));
@@ -166,7 +298,7 @@ export function buildDigest(
   // 3) Minimum mode — a quiet day is still a cue for the 07:00 habit.
   let quietLine: string | undefined;
   if (top.length === 0) {
-    const next = nextThing(bills);
+    const next = nextThing(bills, events);
     quietLine = next
       ? `All calm today. Next: ${next.label} in ${next.days} days.`
       : 'All calm today. Nothing needs you right now.';
@@ -186,10 +318,15 @@ export function buildDigest(
   };
 }
 
-function nextThing(bills: Bill[]): { label: string; days: number } | null {
-  const upcoming = bills
-    .filter((b) => b.confirmed && b.renewalDate)
-    .map((b) => ({ label: `${b.provider} renewal`, days: daysUntil(b.renewalDate as string) }))
+function nextThing(bills: Bill[], events: CalendarEvent[] = []): { label: string; days: number } | null {
+  const upcoming = [
+    ...bills
+      .filter((b) => b.confirmed && b.renewalDate)
+      .map((b) => ({ label: `${b.provider} renewal`, days: daysUntil(b.renewalDate as string) })),
+    // A quiet day should point at the next real thing in the household's life,
+    // not only at the next invoice.
+    ...events.map((e) => ({ label: e.summary, days: daysUntil(e.start) })),
+  ]
     .filter((x) => x.days >= 0)
     .sort((a, b) => a.days - b.days);
   return upcoming[0] ?? null;

@@ -42,8 +42,20 @@ export async function ingestEmail(
   const { result, engine } = await extractBill(email);
   const took = Date.now() - t0;
 
+  // Values the sender published as schema.org markup never went anywhere to be
+  // read — no model, no heuristic. Worth its own line: it is the one path where
+  // GiGi is copying a stated fact rather than interpreting anything.
+  if (result.evidence.amount?.source === 'json-ld' || result.evidence.renewalDate?.source === 'json-ld') {
+    logProcessing(
+      hid, 'analyzed_on_server', 'bill', 'gigi_server',
+      'The sender had published the billing details in a machine-readable form — GiGi read those directly',
+      'Take the amount and dates from the sender rather than interpreting the email',
+      'Consent', 'EU (London)',
+    );
+  }
+
   // Record the analysis hop truthfully: AI (leaves for EU inference) vs. on-server.
-  if (engine === 'anthropic') {
+  if (engine === 'anthropic' || engine === 'anthropic-failed') {
     logProcessing(
       hid, 'sent_to_ai', 'bill', 'gigi_ai',
       'The email was sent to GiGi’s AI to be read',
@@ -72,6 +84,10 @@ export async function ingestEmail(
     amount: result.amount,
     currency: result.currency ?? household.currency,
     renewalDate: result.renewalDate,
+    sourceAmount: result.sourceAmount,
+    billingPeriod: result.billingPeriod ?? undefined,
+    paymentDueDate: result.paymentDueDate,
+    evidence: result.evidence,
     priceIncreaseFlag: result.priceIncreaseFlag,
     source: 'extracted',
     sourceRef,
@@ -91,6 +107,12 @@ export async function ingestEmail(
     type: bill.type,
     hasAmount: result.amount !== null,
     hasDate: result.renewalDate !== null,
+    // The measurements the launch gate is written against: where each value
+    // came from, and why a null was a null.
+    amountSource: result.evidence.amount?.source ?? null,
+    dateSource: result.evidence.renewalDate?.source ?? null,
+    billingPeriod: result.billingPeriod,
+    foreignCurrency: result.foreignCurrency ?? null,
   });
 
   return { engine, extracted: result, bill };
