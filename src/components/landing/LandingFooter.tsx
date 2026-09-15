@@ -1,9 +1,12 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function LandingFooter() {
   return (
     <footer>
-      <div className="footer-logo">GiGi</div>
+      <div className="footer-logo">
+        <Image src="/images/gigi-logo-bone.png" alt="GiGi" width={990} height={579} />
+      </div>
       <div className="footer-links">
         <Link href="/privacy">Privacy policy</Link>
         {/* No terms page exists yet — inert until the legal copy lands. */}
