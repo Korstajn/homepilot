@@ -153,7 +153,8 @@ nav.scrolled{background:rgba(245,242,236,0.98);box-shadow:var(--sh);}
 
 .verticals-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:20px;}
 .vert{background:var(--bone);border:1px solid var(--border);border-radius:var(--rl);padding:24px;}
-.vert-icon{font-size:26px;margin-bottom:10px;}
+.vert-icon{width:34px;height:34px;margin-bottom:12px;}
+.vert-icon svg{width:100%;height:100%;stroke:var(--sage-m);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
 .vert-title{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:8px;}
 .vert-example{font-size:12.5px;font-weight:500;color:var(--ink2);background:var(--white);border:1px solid var(--border);border-radius:var(--rs);padding:9px 11px;line-height:1.5;font-style:italic;}
 .vert-example::before{content:'"';margin-right:1px;}
@@ -246,6 +247,25 @@ nav.scrolled{background:rgba(245,242,236,0.98);box-shadow:var(--sh);}
 .founder-sign-role{font-size:13px;color:var(--ink3);}
 @media(max-width:900px){.founder-layout{grid-template-columns:1fr;gap:32px;}.founder-quote{font-size:24px;}}
 
+
+/* DELEGATION / MULTIPLAYER */
+#shared{background:var(--ink);color:var(--bone);}
+#shared .sec-tag{color:rgba(245,242,236,0.45);}
+#shared .sec-h{color:var(--bone);}
+#shared .sec-lead{color:rgba(245,242,236,0.6);}
+.share-layout{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:46px;}
+.share-row{display:flex;gap:16px;align-items:flex-start;padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.09);}
+.share-row:last-child{border-bottom:none;}
+.share-av{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;}
+.share-t{font-size:15.5px;font-weight:600;color:var(--bone);margin-bottom:3px;}
+.share-d{font-size:13px;color:rgba(245,242,236,0.6);line-height:1.55;}
+.task-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:var(--r);padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;gap:14px;}
+.task-body{flex:1;}
+.task-t{font-size:14px;font-weight:600;color:var(--bone);}
+.task-s{font-size:12px;color:rgba(245,242,236,0.5);margin-top:2px;}
+.task-pill{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+@media(max-width:900px){.share-layout{grid-template-columns:1fr;gap:32px;}}
+
 /* FOOTER */
 /* GET IN TOUCH */
 #contact{background:var(--ink);padding:60px 80px 70px;border-top:1px solid rgba(255,255,255,0.06);}
@@ -325,7 +345,7 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);padding
       <h1 class="hero-h1">A calmer home,<br><em>a happier you.</em></h1>
       <div class="hero-badge">The household operating system every family needs</div>
       <p class="hero-sub">One place for the whole household's to-do list — delegate to GiGi, your proactive chief of staff for household admin, or to anyone else in your household.</p>
-      <div class="hero-actions" style="justify-content:center;">
+      <div class="hero-actions">
         <button class="btn-hero" style="padding:17px 38px;font-size:17px;" onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})">
           Join the waitlist
           <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -422,22 +442,22 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);padding
 <section class="section" id="what">
   <div class="section-inner">
     <div class="what-intro reveal" style="margin-bottom:34px;">
-      <div class="sec-tag">The cost of household admin</div>
-      <h2 class="sec-h">It adds up to<br><em>weeks of your life.</em></h2>
+      <div class="sec-tag">What you get back</div>
+      <h2 class="sec-h">That's weeks of your life,<br><em>handed back.</em></h2>
     </div>
 
     <div class="time-stats reveal">
       <div class="tstat">
-        <div class="tstat-val">4.75 hrs</div>
-        <div class="tstat-label">a week the average UK adult spends on life admin</div>
+        <div class="tstat-val">+4.75 hrs</div>
+        <div class="tstat-label">a week, the time the average UK adult loses to life admin</div>
       </div>
       <div class="tstat">
         <div class="tstat-val">~100</div>
-        <div class="tstat-label">life admin tasks put off every year</div>
+        <div class="tstat-label">life admin tasks you'd otherwise put off every year</div>
       </div>
       <div class="tstat">
-        <div class="tstat-val">13 days</div>
-        <div class="tstat-label">a year lost to admin and errands</div>
+        <div class="tstat-val">+13 days</div>
+        <div class="tstat-label">of your life, every year, back in your hands</div>
       </div>
     </div>
     <div class="tstat-source reveal">Sources: Smart Energy GB; Nationwide "life admin" research.</div>
@@ -449,32 +469,32 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);padding
     </div>
     <div class="verticals-grid">
       <div class="vert reveal">
-        <div class="vert-icon">💳</div>
+        <div class="vert-icon"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M6 15h4"/></svg></div>
         <div class="vert-title">Bills</div>
         <div class="vert-example">Found a better broadband deal. Saving you £168 this year. Switch confirmed.</div>
       </div>
       <div class="vert reveal">
-        <div class="vert-icon">📋</div>
+        <div class="vert-icon"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 11l2 2 4-4"/></svg></div>
         <div class="vert-title">Household admin</div>
         <div class="vert-example">Ella's trip consent form is due today. Finn has PE kit tomorrow.</div>
       </div>
       <div class="vert reveal">
-        <div class="vert-icon">🗓️</div>
+        <div class="vert-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
         <div class="vert-title">Scheduling &amp; coordination</div>
         <div class="vert-example">Ella's passport expires in July. Trip's in August — renew now.</div>
       </div>
       <div class="vert reveal">
-        <div class="vert-icon">🎒</div>
+        <div class="vert-icon"><svg viewBox="0 0 24 24"><path d="M6 10a6 6 0 0112 0v10a1 1 0 01-1 1H7a1 1 0 01-1-1z"/><path d="M9 10V7a3 3 0 016 0v3M9 16h6"/></svg></div>
         <div class="vert-title">School &amp; children</div>
         <div class="vert-example">Reading the class WhatsApp so you don't have to — sports day moved to Friday.</div>
       </div>
       <div class="vert reveal">
-        <div class="vert-icon">🛒</div>
+        <div class="vert-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.1a1.6 1.6 0 001.6 1.3h8.6a1.6 1.6 0 001.6-1.3L21 7H6"/></svg></div>
         <div class="vert-title">Groceries</div>
         <div class="vert-example">This week's basket is ready — 3 swaps flagged. Approve to order.</div>
       </div>
       <div class="vert reveal">
-        <div class="vert-icon">🔔</div>
+        <div class="vert-icon"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.5 20a2 2 0 003 0"/></svg></div>
         <div class="vert-title">Reminders &amp; contracts</div>
         <div class="vert-example">Your gym contract renews in 12 days — cancel or keep?</div>
       </div>
@@ -526,11 +546,11 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);padding
     <div class="quotes-section reveal">
       <div class="quote-card">
         <div class="quote-text">"I'd been meaning to switch broadband for six months. GiGi did it in a day."</div>
-        <div class="quote-author">Mark P. · Father of 3 · Manchester</div>
+        <div class="quote-author">A parent in London</div>
       </div>
       <div class="quote-card">
         <div class="quote-text">"The school WhatsApp used to stress me out every morning. Now I get three bullet points and I'm done."</div>
-        <div class="quote-author">Jess K. · Mother of 1 · Bristol</div>
+        <div class="quote-author">A parent in London</div>
       </div>
     </div>
   </div>
@@ -572,7 +592,7 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);padding
             <button type="submit">Join waitlist</button>
           </div>
         </form>
-        <div class="fq-note">No spam. We'll confirm your spot personally.</div>
+        <div class="fq-note">No spam. We'll send you an access code once you've been approved to try GiGi.</div>
         <div id="signup-thanks">You're on the list. We'll be in touch within 48 hours.</div>
       </div>
     </div>
@@ -589,7 +609,7 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);padding
       <input type="email" id="cta-email" placeholder="your@email.com">
       <button onclick="handleCtaSignup()">Join waitlist →</button>
     </div>
-    <div class="cta-note">No credit card. We'll confirm your place personally.</div>
+    <div class="cta-note">No credit card. We'll send you an access code once you've been approved to try GiGi.</div>
     <div id="cta-thanks">You're on the list. We'll be in touch within 48 hours.</div>
   </div>
 </section>
@@ -619,6 +639,7 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);padding
     <a href="#">Privacy policy</a>
     <a href="#">Terms of service</a>
     <a href="mailto:contact@getgigiapp.com">contact@getgigiapp.com</a>
+    <a href="https://instagram.com/getgigiapp" target="_blank" rel="noopener" aria-label="GiGi on Instagram" style="display:inline-flex;align-items:center;gap:7px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>@getgigiapp</a>
   </div>
   <div class="footer-copy">© 2026 GiGi Ltd · getgigiapp.com · London, UK</div>
 </footer>

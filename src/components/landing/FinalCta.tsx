@@ -61,7 +61,7 @@ export default function FinalCta() {
             {busy ? 'Joining…' : 'Join waitlist →'}
           </button>
         </div>
-        <div className="cta-note">No credit card. We&apos;ll confirm your place personally.</div>
+        <div className="cta-note">No credit card. We&apos;ll send you an access code once you&apos;ve been approved to try GiGi.</div>
         {done && (
           <div id="cta-thanks" style={{ display: 'block' }}>
             You&apos;re on the list. We&apos;ll be in touch within 48 hours.

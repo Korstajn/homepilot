@@ -3,7 +3,13 @@ import Image from 'next/image';
 export default function PhotoReality() {
   return (
     <section className="chapter-photo">
-      <Image src="/images/story-kitchen.jpg" alt="Kerstin with her family" width={1100} height={1002} sizes="100vw" />
+      <Image
+        src="/images/story-kitchen.jpg"
+        alt="Kerstin with her family"
+        width={1200}
+        height={1093}
+        sizes="(max-width: 868px) 100vw, 820px"
+      />
       <div className="photo-caption">
         <div className="photo-caption-inner">
           <div className="ch-eyebrow" style={{ color: 'rgba(245,242,236,0.45)' }}>

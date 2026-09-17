@@ -1,12 +1,13 @@
+import { BackpackIcon, BillsIcon, CartIcon, DumbbellIcon, PlaneIcon, WineIcon } from '../landing/icons';
 import Reveal from '../landing/Reveal';
 
 const THINGS = [
-  { icon: '💳', name: 'Bills' },
-  { icon: '🎒', name: 'School & admin' },
-  { icon: '✈️', name: 'Travel' },
-  { icon: '🛒', name: 'Groceries' },
-  { icon: '🍷', name: 'Date night' },
-  { icon: '🏋️', name: 'Workouts' },
+  { icon: <BillsIcon />, name: 'Bills' },
+  { icon: <BackpackIcon />, name: 'School & admin' },
+  { icon: <PlaneIcon />, name: 'Travel' },
+  { icon: <CartIcon />, name: 'Groceries' },
+  { icon: <WineIcon />, name: 'Date night' },
+  { icon: <DumbbellIcon />, name: 'Workouts' },
 ];
 
 export default function ThingsGrid() {
@@ -22,9 +23,7 @@ export default function ThingsGrid() {
         <div className="things-grid">
           {THINGS.map((t) => (
             <Reveal className="thing" key={t.name}>
-              <div className="thing-icon" aria-hidden="true">
-                {t.icon}
-              </div>
+              <div className="thing-icon">{t.icon}</div>
               <div className="thing-name">{t.name}</div>
             </Reveal>
           ))}
