@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import PhoneFrame from '@/components/PhoneFrame';
+import AuthFrame from '@/components/AuthFrame';
 import Icon from '@/components/Icon';
 import { trackClient } from '@/lib/analytics';
 
@@ -54,7 +54,7 @@ export default function Signup() {
 
   if (recovery) {
     return (
-      <PhoneFrame>
+      <AuthFrame>
         <div className="screen">
           <div className="center" style={{ marginBottom: 20, marginTop: 12 }}>
             <div style={{ color: 'var(--brand)' }}><Icon name="lock" size={30} /></div>
@@ -76,7 +76,7 @@ export default function Signup() {
             I&apos;ve saved it — continue
           </button>
         </div>
-      </PhoneFrame>
+      </AuthFrame>
     );
   }
 
@@ -84,7 +84,7 @@ export default function Signup() {
   // letting someone fill in a form whose submit can only fail.
   if (invite?.closed) {
     return (
-      <PhoneFrame>
+      <AuthFrame>
         <div className="screen">
           <div className="center" style={{ marginBottom: 20, marginTop: 12 }}>
             <div style={{ color: 'var(--brand)' }}><Icon name="lock" size={30} /></div>
@@ -101,7 +101,7 @@ export default function Signup() {
             Already have an account? <Link href="/login" className="link">Log in</Link>
           </p>
         </div>
-      </PhoneFrame>
+      </AuthFrame>
     );
   }
 
@@ -109,7 +109,7 @@ export default function Signup() {
   const ready = Boolean(name) && (emailless || Boolean(email)) && password.length >= 6 && (!needsInvite || Boolean(inviteCode.trim()));
 
   return (
-    <PhoneFrame>
+    <AuthFrame>
       <div className="screen">
         <div className="center" style={{ marginBottom: 24, marginTop: 12 }}>
           <span className="logo-mark" style={{ display: 'inline-grid', width: 44, height: 44, fontSize: 22 }}>G</span>
@@ -172,6 +172,6 @@ export default function Signup() {
           By continuing you agree to our <Link href="/privacy" className="link">privacy policy</Link>. UK &amp; EU data only.
         </p>
       </div>
-    </PhoneFrame>
+    </AuthFrame>
   );
 }

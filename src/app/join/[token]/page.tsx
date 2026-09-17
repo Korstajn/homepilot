@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import PhoneFrame from '@/components/PhoneFrame';
+import AuthFrame from '@/components/AuthFrame';
 import Icon from '@/components/Icon';
 import { trackClient } from '@/lib/analytics';
 
@@ -44,7 +44,7 @@ export default function Join({ params }: { params: { token: string } }) {
 
   if (recovery) {
     return (
-      <PhoneFrame>
+      <AuthFrame>
         <div className="screen center">
           <div style={{ color: 'var(--brand)', marginTop: 12 }}><Icon name="lock" size={30} /></div>
           <h1 style={{ marginTop: 10 }}>Save your recovery code</h1>
@@ -54,12 +54,12 @@ export default function Join({ params }: { params: { token: string } }) {
             I&apos;ve saved it — continue
           </button>
         </div>
-      </PhoneFrame>
+      </AuthFrame>
     );
   }
 
   return (
-    <PhoneFrame>
+    <AuthFrame>
       <div className="screen">
         <div className="center" style={{ marginBottom: 20, marginTop: 12 }}>
           <span className="logo-mark" style={{ display: 'inline-grid', width: 44, height: 44, fontSize: 22 }}>G</span>
@@ -98,6 +98,6 @@ export default function Join({ params }: { params: { token: string } }) {
           </>
         )}
       </div>
-    </PhoneFrame>
+    </AuthFrame>
   );
 }
