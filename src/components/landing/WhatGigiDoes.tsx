@@ -1,40 +1,41 @@
+import { AdminIcon, BellIcon, BillsIcon, CalendarIcon, BackpackIcon, CartIcon } from './icons';
 import Reveal from './Reveal';
 
 const TIME_STATS = [
-  { val: '4.75 hrs', label: 'a week the average UK adult spends on life admin' },
-  { val: '~100', label: 'life admin tasks put off every year' },
-  { val: '13 days', label: 'a year lost to admin and errands' },
+  { val: '+4.75 hrs', label: 'a week, the time the average UK adult loses to life admin' },
+  { val: '~100', label: "life admin tasks you'd otherwise put off every year" },
+  { val: '+13 days', label: 'of your life, every year, back in your hands' },
 ];
 
 // The verticals GiGi covers, each shown through a line she would actually send.
 const VERTICALS = [
   {
-    icon: '💳',
+    icon: <BillsIcon />,
     title: 'Bills',
     example: 'Found a better broadband deal. Saving you £168 this year. Switch confirmed.',
   },
   {
-    icon: '📋',
+    icon: <AdminIcon />,
     title: 'Household admin',
     example: "Ella's trip consent form is due today. Finn has PE kit tomorrow.",
   },
   {
-    icon: '🗓️',
+    icon: <CalendarIcon />,
     title: 'Scheduling & coordination',
     example: "Ella's passport expires in July. Trip's in August — renew now.",
   },
   {
-    icon: '🎒',
+    icon: <BackpackIcon />,
     title: 'School & children',
     example: "Reading the class WhatsApp so you don't have to — sports day moved to Friday.",
   },
   {
-    icon: '🛒',
+    icon: <CartIcon />,
     title: 'Groceries',
     example: "This week's basket is ready — 3 swaps flagged. Approve to order.",
   },
   {
-    icon: '🔔',
+    icon: <BellIcon />,
     title: 'Reminders & contracts',
     example: 'Your gym contract renews in 12 days — cancel or keep?',
   },
@@ -45,11 +46,11 @@ export default function WhatGigiDoes() {
     <section className="section" id="what">
       <div className="section-inner">
         <Reveal className="what-intro" style={{ marginBottom: 34 }}>
-          <div className="sec-tag">The cost of household admin</div>
+          <div className="sec-tag">What you get back</div>
           <h2 className="sec-h">
-            It adds up to
+            That&apos;s weeks of your life,
             <br />
-            <em>weeks of your life.</em>
+            <em>handed back.</em>
           </h2>
         </Reveal>
 
@@ -77,9 +78,7 @@ export default function WhatGigiDoes() {
         <div className="verticals-grid">
           {VERTICALS.map((v) => (
             <Reveal className="vert" key={v.title}>
-              <div className="vert-icon" aria-hidden="true">
-                {v.icon}
-              </div>
+              <div className="vert-icon">{v.icon}</div>
               <div className="vert-title">{v.title}</div>
               <div className="vert-example">{v.example}</div>
             </Reveal>

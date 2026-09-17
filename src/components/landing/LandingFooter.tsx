@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { InstagramIcon } from './icons';
 
 export default function LandingFooter() {
   return (
@@ -12,6 +13,16 @@ export default function LandingFooter() {
         {/* No terms page exists yet — inert until the legal copy lands. */}
         <span>Terms of service</span>
         <a href="mailto:contact@getgigiapp.com">contact@getgigiapp.com</a>
+        <a
+          href="https://instagram.com/getgigiapp"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GiGi on Instagram"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}
+        >
+          <InstagramIcon />
+          @getgigiapp
+        </a>
       </div>
       <div className="footer-copy">© 2026 GiGi Ltd · getgigiapp.com · London, UK</div>
     </footer>

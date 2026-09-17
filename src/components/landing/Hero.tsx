@@ -65,7 +65,7 @@ export default function Hero() {
             One place for the whole household&apos;s to-do list — delegate to GiGi, your proactive
             chief of staff for household admin, or to anyone else in your household.
           </p>
-          <div className="hero-actions" style={{ justifyContent: 'center' }}>
+          <div className="hero-actions">
             <button
               className="btn-hero"
               style={{ padding: '17px 38px', fontSize: 17 }}

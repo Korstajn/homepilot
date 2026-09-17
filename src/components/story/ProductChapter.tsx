@@ -26,7 +26,7 @@ export default function ProductChapter() {
             </div>
           </Reveal>
           <Reveal className="product-photo">
-            <Image src="/images/story-park.jpg" alt="Kerstin with her family" width={1100} height={825} sizes="(max-width: 900px) 100vw, 45vw" />
+            <Image src="/images/story-park.jpg" alt="Kerstin with her family" width={1000} height={1250} sizes="(max-width: 900px) 100vw, 45vw" />
           </Reveal>
         </div>
       </div>
