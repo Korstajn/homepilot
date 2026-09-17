@@ -594,7 +594,13 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 @media (min-width: 900px) {
   .authwrap { grid-template-columns: 1.05fr 1fr; }
   .auth-aside {
-    position: relative;
+    /* Sticky, like the app sidebar. The onboarding steps are a long form's
+       worth of scroll, and a panel that scrolls away with it stops answering
+       "how much more of this is there" exactly when that is being asked. */
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100dvh;
     display: flex;
     align-items: center;
     padding: 48px clamp(32px, 5vw, 76px);
