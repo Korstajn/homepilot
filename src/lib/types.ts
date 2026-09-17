@@ -277,6 +277,10 @@ export type ProcessingActor =
   | 'gigi_ai' // Anthropic, EU region — only when AI extraction is enabled
   | 'email_service' // inbound email provider
   | 'google' // Gmail, when the user has connected their inbox (not EU-resident)
+  // The forecast service. Listed as its own actor because it is a hop out of
+  // our infrastructure, however small what we send it: a coordinate pair for a
+  // postal district and nothing else (src/lib/weather.ts).
+  | 'weather_service'
   | 'concierge'; // founder-assisted execution / the provider a switch goes to
 
 export type ProcessingAction =
@@ -306,6 +310,10 @@ export type ProcessingAction =
   | 'member_removed'
   | 'child_added'
   | 'child_removed'
+  // A forecast was looked up for the household's postal district. Logged like
+  // every other outbound hop — a lookup the user did not ask for and cannot see
+  // is exactly the kind of thing the trust log exists to make visible.
+  | 'weather_checked'
   | 'data_deleted';
 
 export interface ProcessingEvent {

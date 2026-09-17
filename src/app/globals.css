@@ -506,3 +506,27 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 
 /* Smooth momentum scrolling inside the phone screen. */
 .screen { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+
+/* =========================================================================
+   WEATHER — the what-to-wear strip (src/components/WeatherStrip.tsx).
+   ========================================================================= */
+.weather-card { background: linear-gradient(180deg, #f4f9fb 0%, var(--surface) 70%); }
+.weather-temp { text-align: right; flex: none; line-height: 1.1; }
+.weather-temp b { display: block; font-family: var(--font-display); font-size: 26px; }
+.weather-temp span { font-size: 13px; color: var(--muted); }
+.weather-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+.weather-week {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.weather-day {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+}
+.weather-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.weather-day-head b { font-size: 13px; }

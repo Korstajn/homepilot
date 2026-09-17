@@ -8,6 +8,7 @@ import CommandBar from '@/components/CommandBar';
 import ScreenHeader from '@/components/ScreenHeader';
 import CountUp from '@/components/CountUp';
 import { SkeletonScreen } from '@/components/Skeleton';
+import WeatherStrip from '@/components/WeatherStrip';
 import type { Currency, Digest, DigestItem, Household } from '@/lib/types';
 
 export default function DigestScreen() {
@@ -87,6 +88,8 @@ export default function DigestScreen() {
           ● GiGi is running. Bills, school &amp; travel monitored around the clock.
         </div>
       )}
+
+      <WeatherStrip compact />
 
       {value && (
         <>

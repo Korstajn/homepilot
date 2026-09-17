@@ -22,6 +22,7 @@ import {
   ActionLog,
   UrgencyBand,
 } from './types';
+import { adviceFor, type WeatherOutlook } from './weather';
 
 const MAX_ITEMS = 4;
 
@@ -38,6 +39,14 @@ function daysUntil(isoDateStr: string): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - now.getTime()) / 86_400_000);
+}
+
+/** An ISO date N days from today, in local time — the key the forecast is keyed by. */
+function addDays(offset: number): string {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0); // midday, so a DST shift cannot roll the date over
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function bandFor(days: number): UrgencyBand {
@@ -189,12 +198,76 @@ function calendarItems(
   return items;
 }
 
+/**
+ * The weather, turned into the one thing a parent has to do about it.
+ *
+ * A forecast is not a signal — "14°C and showers" is information, and the
+ * digest contract has no room for information. What belongs in a four-item
+ * morning brief is the ACTION: the coat that has to go on, the wellies that
+ * have to be found. `clothingAdvice` does that reading; this decides whether it
+ * is worth one of the four slots.
+ *
+ * The rules that keep it from becoming noise:
+ *   • only when the household actually has children — this is a kit-bag signal,
+ *     not a weather widget;
+ *   • only today and tomorrow, because that is the horizon where "put a coat
+ *     out" is an action rather than a note;
+ *   • only when the day demands something (`severity: 'act'`), so a mild dry
+ *     week says nothing at all;
+ *   • at most ONE item, ever. Two weather lines in a four-item digest is the
+ *     digest failing.
+ */
+function weatherItems(
+  household: Household,
+  children: Child[],
+  events: CalendarEvent[],
+  weather: WeatherOutlook | null,
+  now: string,
+): DigestItem[] {
+  if (!weather) return [];
+  const hasChildren = household.children !== 'none' || children.length > 0;
+  if (!hasChildren) return [];
+
+  const base = { status: 'open' as const, firstSurfacedAt: now, carryForwardCount: 0 };
+
+  for (const offset of [0, 1]) {
+    const date = addDays(offset);
+    const advice = adviceFor(weather, date);
+    if (!advice || advice.severity !== 'act') continue;
+
+    // A school trip or sports day on a wet morning is a different instruction
+    // to an ordinary Tuesday, and it is the one people are caught out by — so
+    // when the calendar has something that day, the line says so.
+    const sameDay = events.filter(
+      (e) => e.start.slice(0, 10) === date && (e.category === 'school' || e.category === 'travel'),
+    );
+    const detail = sameDay.length > 0
+      ? `${advice.detail} ${sameDay[0].summary} is ${offset === 0 ? 'today' : 'tomorrow'}.`
+      : advice.detail;
+
+    return [
+      {
+        ...base,
+        id: id('item'),
+        category: 'home',
+        urgency: offset === 0 ? 'today' : 'soon',
+        line: clampWords(offset === 0 ? advice.headline : `Tomorrow: ${advice.headline.toLowerCase()}`),
+        detail,
+        executable: false,
+      },
+    ];
+  }
+
+  return [];
+}
+
 export function buildDigest(
   household: Household,
   bills: Bill[],
   actions: ActionLog[],
   events: CalendarEvent[] = [],
   children: Child[] = [],
+  weather: WeatherOutlook | null = null,
 ): Digest {
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
@@ -287,6 +360,10 @@ export function buildDigest(
 
   // 2b) The calendar — school, travel and home logistics.
   items.push(...calendarItems(household, events, children, now));
+
+  // 2c) The weather, but only as an action on a kit bag. Null when the forecast
+  // could not be fetched, which is silence rather than a stale guess.
+  items.push(...weatherItems(household, children, events, weather, now));
 
   // Drop anything the user already resolved.
   const open = items.filter((i) => !resolvedItemKeys.has(i.id));

@@ -44,7 +44,7 @@ export default function StoryCta() {
         </Link>
         <div style={{ marginTop: 26 }}>
           <a
-            href="https://instagram.com/getgigiapp"
+            href="https://www.instagram.com/getgigiapp"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GiGi on Instagram"

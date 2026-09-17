@@ -58,6 +58,20 @@ export function subprocessors(): Subprocessor[] {
         : 'Not available on this deployment',
     },
     {
+      // Listed even though it receives nothing about the household beyond a
+      // coordinate pair: the standard here is "every hop out of our
+      // infrastructure is named", not "every hop we think matters".
+      name: 'Open-Meteo (weather, EU)',
+      role: 'Provides the forecast behind GiGi\u2019s what-to-wear advice',
+      region: 'EU',
+      data:
+        'A coordinate pair for your postal district (e.g. SW1A) \u2014 never your full ' +
+        'postcode, name or address. Your browser never contacts it; our server asks on ' +
+        'your behalf, so your IP address is not exposed either',
+      active: true,
+      note: 'Only used when your household has a postcode set. No account, no key, no tracking',
+    },
+    {
       name: 'Your concierge',
       role: 'Carries out a switch after you approve it',
       region: 'EU',

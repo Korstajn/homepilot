@@ -14,7 +14,7 @@ export default function LandingFooter() {
         <span>Terms of service</span>
         <a href="mailto:contact@getgigiapp.com">contact@getgigiapp.com</a>
         <a
-          href="https://instagram.com/getgigiapp"
+          href="https://www.instagram.com/getgigiapp"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="GiGi on Instagram"
