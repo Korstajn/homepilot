@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { InstagramIcon } from '../landing/icons';
 import Reveal from '../landing/Reveal';
 
 export default function StoryCta() {
@@ -41,6 +42,25 @@ export default function StoryCta() {
             getgigiapp.com
           </span>
         </Link>
+        <div style={{ marginTop: 26 }}>
+          <a
+            href="https://instagram.com/getgigiapp"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="GiGi on Instagram"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 9,
+              color: 'rgba(245,242,236,0.7)',
+              textDecoration: 'none',
+              fontSize: 15,
+            }}
+          >
+            <InstagramIcon size={20} />
+            @getgigiapp
+          </a>
+        </div>
       </Reveal>
     </section>
   );

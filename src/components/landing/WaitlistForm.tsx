@@ -69,7 +69,7 @@ export default function WaitlistForm({ source }: { source: string }) {
           </button>
         </div>
       </form>
-      <div className="fq-note">No spam. We&apos;ll confirm your spot personally.</div>
+      <div className="fq-note">No spam. We&apos;ll send you an access code once you&apos;ve been approved to try GiGi.</div>
       {error && (
         <div className="fq-note" role="alert" style={{ color: '#B4342F', marginTop: 8 }}>
           {error}

@@ -9,11 +9,11 @@ const STATS = [
 const QUOTES = [
   {
     text: "I'd been meaning to switch broadband for six months. GiGi did it in a day.",
-    author: 'Mark P. · Father of 3 · Manchester',
+    author: 'A parent in London',
   },
   {
     text: "The school WhatsApp used to stress me out every morning. Now I get three bullet points and I'm done.",
-    author: 'Jess K. · Mother of 1 · Bristol',
+    author: 'A parent in London',
   },
 ];
 
@@ -39,7 +39,7 @@ export default function Proof() {
         </Reveal>
         <Reveal className="quotes-section">
           {QUOTES.map((q) => (
-            <div className="quote-card" key={q.author}>
+            <div className="quote-card" key={q.text}>
               <div className="quote-text">{`"${q.text}"`}</div>
               <div className="quote-author">{q.author}</div>
             </div>
