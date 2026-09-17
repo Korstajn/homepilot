@@ -67,14 +67,18 @@ mock and its two float cards, manifesto, six verticals, three steps, the dark
 proof band, FAQ + waitlist card, final CTA, contact form, footer. At 390 px the
 page has no horizontal overflow.
 
-### Four deliberate differences
+### Three deliberate differences
 
 | # | Reference | Here | Why |
 | --- | --- | --- | --- |
 | 1 | `<link>` to Google Fonts (a dead relative path in the saved file, so it renders in Georgia/system faces) | `next/font` self-hosts DM Sans, Instrument Serif, JetBrains Mono | It renders the design **as specified**. It also keeps the self-only CSP in `next.config.mjs` intact and stops a visitor's IP reaching a third party — `docs/PRIVACY_ARCHITECTURE.md` promises exactly that. |
 | 2 | All three forms POST to Formspree | They POST to `/api/waitlist` and a new `/api/contact` | Same-origin (the CSP forbids third-party `form-action`), no third-party processor to add to the privacy docs, and signups land in the store `/app/metrics` already reads. |
 | 3 | FAQ rows are clickable `<div>`s; inputs set `outline:none` | Rows are `<button aria-expanded>`; a `:focus-visible` ring is restored | Keyboard and screen-reader access, with zero visual change for mouse and touch. |
-| 4 | No way into the product (it is the public marketing page) | A fixed "Beta build · Open the app →" pill, bottom right | A tester who just typed a code needs a door. It is `position:fixed`, outside the page flow, so **no element of the design moves**, and it disappears when the gate is off — i.e. it can never appear on the public site. |
+
+The page now matches the reference on app entry points too: it has none. The
+"Beta build · Open the app →" pill that used to sit bottom-right was removed
+when the site was made ready for the public — `/login` and `/app` are typed
+directly.
 
 Two links the reference leaves as dead `#` anchors: *Privacy policy* now points
 at the real `/privacy` page; *Terms of service* is inert text until that page

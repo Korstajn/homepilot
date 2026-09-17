@@ -1,5 +1,4 @@
 import Contact from '@/components/landing/Contact';
-import BetaBar from '@/components/landing/BetaBar';
 import Faq from '@/components/landing/Faq';
 import FinalCta from '@/components/landing/FinalCta';
 import Hero from '@/components/landing/Hero';
@@ -9,7 +8,6 @@ import LandingNav from '@/components/landing/LandingNav';
 import Manifesto from '@/components/landing/Manifesto';
 import Proof from '@/components/landing/Proof';
 import WhatGigiDoes from '@/components/landing/WhatGigiDoes';
-import { isPublicSite } from '@/lib/beta';
 import './landing.css';
 
 /**
@@ -21,12 +19,8 @@ import './landing.css';
  * rather than to markup — but the rendered page is the reference page.
  */
 export default function Landing() {
-  // The beta pill is fixed over the bottom-right corner; give the footer room
-  // so it can never sit on top of the copyright line.
-  const betaBar = !isPublicSite();
-
   return (
-    <div className={`landing${betaBar ? ' has-beta-bar' : ''}`}>
+    <div className="landing">
       <LandingNav />
       <Hero />
       <Manifesto />
@@ -37,7 +31,6 @@ export default function Landing() {
       <FinalCta />
       <Contact />
       <LandingFooter />
-      <BetaBar />
     </div>
   );
 }

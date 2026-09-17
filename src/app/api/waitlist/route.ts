@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { addWaitlist, listWaitlist, track } from '@/lib/store';
+import { guardInternal } from '@/lib/internal';
 
-export async function GET() {
+/**
+ * The waitlist, for the founder. Every entry is someone's email address, so on
+ * the public site this needs GIGI_ADMIN_TOKEN (src/lib/internal.ts).
+ */
+export async function GET(req: Request) {
+  const denied = guardInternal(req);
+  if (denied) return denied;
+
   const entries = listWaitlist();
   const household = entries.filter((e) => e.segment === 'household').length;
   const company = entries.filter((e) => e.segment === 'company').length;

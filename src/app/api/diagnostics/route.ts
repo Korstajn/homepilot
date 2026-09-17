@@ -9,6 +9,8 @@ import {
   redirectUriProblem,
 } from '@/lib/google';
 import { secretSource } from '@/lib/secrets';
+import { adminToken, guardInternal } from '@/lib/internal';
+import { inviteDiagnostics } from '@/lib/invite';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,15 +32,18 @@ export const dynamic = 'force-dynamic';
  * OAuth redirect, and the redirect URI is the single value most likely to be
  * mismatched against Google Cloud Console.
  *
- * It sits behind the beta gate when one is raised — but the gate is opt-in
- * (GIGI_BETA_GATE=on), so on an ungated build this route answers anyone who
- * has the URL. That is the trade being made while the app runs openly on its
- * `*.vercel.app` hostnames: the value of being able to read a deployment's
- * real configuration is worth more than the little this discloses, none of
- * which is secret. Revisit that before this origin serves the public site —
- * lock it down or drop it.
+ * Who may read it: on a non-public build, anyone with the URL — the value of
+ * being able to read a deployment's real configuration is worth more than the
+ * little this discloses, none of which is secret. On the PUBLIC site it needs
+ * GIGI_ADMIN_TOKEN and 404s without one (src/lib/internal.ts). That is the
+ * "revisit this before the origin serves the public site" this comment used to
+ * promise: the configuration of the real site is not a thing to hand out, even
+ * when no single field in it is a secret.
  */
 export async function GET(req: Request) {
+  const denied = guardInternal(req);
+  if (denied) return denied;
+
   const gate = gateDiagnostics();
   const secret = secretSource();
   const gmail = googleConfigured();
@@ -59,12 +64,12 @@ export async function GET(req: Request) {
   }
 
   if (!devUsersEnabled()) {
-    warnings.push('GIGI_DEV_PASSWORD is unset, so there are no test accounts and /login has nothing to offer. Sign-up does not persist on serverless.');
+    warnings.push('GIGI_DEV_PASSWORD is unset, so there are no test accounts on this build. Sign-up does not persist on serverless, so without them there is no account here that survives a redeploy.');
   }
 
   if (gateMode() === 'off' && !isPublicSite()) {
     warnings.push(
-      'This origin is ungated (GIGI_BETA_GATE is not "on"), so every page and API route here — including this one — answers anyone with the URL. robots.txt still disallows crawling, so it will not be indexed. Note that /api/auth/dev-users lists the test-account addresses and GIGI_DEV_PASSWORD is shared by all of them: while the build is open, that password is the only thing between a stranger and a test account. Set GIGI_BETA_GATE=on to gate it again.',
+      'This origin is ungated (GIGI_BETA_GATE is not "on"), so every page and API route here — including this one — answers anyone with the URL. robots.txt still disallows crawling, so it will not be indexed. Note that /api/auth/dev-users lists the test-account addresses and GIGI_DEV_PASSWORD is shared by all of them: while the build is open, that password is the only thing between a stranger and a test account. Set GIGI_BETA_GATE=on to gate it again. (On the public site that route, /api/auth/demo and the founder endpoints are closed regardless — see src/lib/internal.ts.)',
     );
   }
 
@@ -82,6 +87,23 @@ export async function GET(req: Request) {
   } else if (!process.env.GOOGLE_REDIRECT_URI?.trim()) {
     warnings.push(
       'GOOGLE_REDIRECT_URI is unset, so the redirect URI is derived from each request. On Vercel every preview deployment has a different hostname and none are registered with Google, which fails as redirect_uri_mismatch. Set it explicitly.',
+    );
+  }
+
+  const invite = inviteDiagnostics();
+  if (invite.mode === 'closed') {
+    warnings.push(
+      'This is the public site and GIGI_INVITE_CODES is unset, so /api/auth/signup is refusing every attempt: nobody can create an account. That is the fail-closed default, not a bug — set GIGI_INVITE_CODES to the codes you are sending out, or GIGI_INVITE_GATE=off to open sign-up to everyone.',
+    );
+  } else if (invite.mode === 'open' && isPublicSite()) {
+    warnings.push(
+      'Sign-up on the public site is OPEN to anyone: GIGI_INVITE_GATE=off overrides the invite requirement. Remove it to go back to invite-only.',
+    );
+  }
+
+  if (!adminToken() && isPublicSite()) {
+    warnings.push(
+      'GIGI_ADMIN_TOKEN is unset on the public site, so the founder endpoints (/api/waitlist, /api/feedback, /api/events, this route) answer 404 for everyone including you. Set it to read them — openssl rand -hex 32.',
     );
   }
 
@@ -106,6 +128,14 @@ export async function GET(req: Request) {
     betaGate: {
       codeVisible: gate.codeVisible,
       override: gate.gateOverride,
+    },
+    // Whether account creation is gated, and how many codes are live. Never
+    // the codes themselves.
+    invites: {
+      mode: invite.mode,
+      codesConfigured: invite.codesConfigured,
+      override: invite.gateOverride,
+      adminToken: Boolean(adminToken()),
     },
     accounts: {
       sessionSecret: secret,

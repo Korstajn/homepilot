@@ -23,17 +23,18 @@ deployment and locally these routes answer directly.
 | POST   | `/api/actions`          | Approve-to-execute loop: `{itemId, action: approve\|done\|dismiss}`. Writes the action log. |
 | GET    | `/api/value`            | Value tracker: `{savedAnnual, handled, currency}`.            |
 | POST   | `/api/events`           | Client instrumentation sink: `{name, props}`.                 |
-| GET    | `/api/events`           | Founder metrics: totals + per-event counts + recent events.  |
+| GET    | `/api/events`           | Founder metrics: totals + per-event counts + recent events. **Founder-only** (see below). |
 | POST   | `/api/feedback`         | In-app feedback: `{kind: wrong_extraction\|general, message}`.|
-| GET    | `/api/feedback`         | List feedback (founder view).                                 |
+| GET    | `/api/feedback`         | List feedback (founder view). **Founder-only** (see below).   |
 | POST   | `/api/waitlist`         | Two-step waitlist: `{email, segment: household\|company}`.    |
-| GET    | `/api/waitlist`         | Waitlist totals by segment (founder view).                    |
+| GET    | `/api/waitlist`         | Waitlist totals by segment + entries (founder view). **Founder-only** (see below). |
 | POST   | `/api/contact`          | Landing "get in touch": `{name, email, message}`.             |
 | GET    | `/api/contact`          | Message count only — the messages themselves are personal data.|
 | POST   | `/api/beta`             | Open the beta gate: `{code}`. Sets the `gigi_beta` cookie for 30 days. Rate-limited per IP. |
 | DELETE | `/api/beta`             | Clear the beta cookie — lock this browser out again.          |
-| GET    | `/api/auth/me`          | Session + household + capabilities. `session` is `none` \| `active` \| `stale`. |
-| GET    | `/api/auth/dev-users`   | Test accounts on this deployment (addresses + names only, never the password). Empty unless `GIGI_DEV_PASSWORD` is set. |
+| GET    | `/api/auth/me`          | Session + household + capabilities. `session` is `none` \| `active` \| `stale`; `publicSite` says whether this deployment is the public one. |
+| GET    | `/api/auth/invite`      | Whether sign-up asks for an invite code: `{required, closed}`. Never returns the codes. |
+| GET    | `/api/auth/dev-users`   | Test accounts on this deployment (addresses + names only, never the password). Empty unless `GIGI_DEV_PASSWORD` is set. **404 on the public site.** |
 | GET    | `/api/auth/google/start`| Redirect to Google's Gmail consent screen. Needs a real session; refuses the demo household. |
 | GET    | `/api/auth/google/callback` | OAuth return leg. Failures redirect back with a fixed `?gmail=<reason>`. |
 | GET    | `/api/auth/google`      | Gmail connection status. Never returns the token.             |
@@ -41,6 +42,40 @@ deployment and locally these routes answer directly.
 | GET    | `/api/gmail/probe`      | Read-only proof the grant works: `From`/`Subject`/`Date` of up to 10 bill-looking emails. Message bodies are never requested. |
 | GET    | `/api/gmail/search`     | Search the connected inbox (`days`, `max`, optional `q`). Headers only — still no message bodies. |
 | POST   | `/api/gmail/import`     | **Reads message bodies and PDF attachments** for up to 12 emails and adds them as unconfirmed bills. User-triggered; never scheduled. |
+
+## Sign-up and invite codes
+
+`POST /api/auth/signup` takes an `inviteCode` alongside `name`, `email` and
+`password`. The invite is checked **first**, before the request is validated at
+all, so an uninvited caller cannot use the route's "that email already exists"
+answer to test addresses.
+
+| Situation | Status | `code` |
+| --- | --- | --- |
+| No code sent, one required | 400 | `invite_required` |
+| Code sent, not one of ours | 403 | `invite_invalid` |
+| Public site with no codes configured | 403 | `signup_closed` |
+
+`POST /api/auth/login` never asks for an invite code: the invite buys the
+account, and rotating the codes must not lock out the people who already used
+one. See `src/lib/invite.ts` and `.env.example` for `GIGI_INVITE_CODES`.
+
+## Founder-only endpoints
+
+`/api/waitlist` (GET), `/api/feedback` (GET), `/api/events` (GET) and
+`/api/diagnostics` are founder tooling — the first two hand out other people's
+email addresses and words.
+
+- On a **non-public** build they answer anyone, exactly as before.
+- On the **public site** they answer **404** unless the caller presents
+  `GIGI_ADMIN_TOKEN`, as an `x-gigi-admin` header or `?token=`.
+
+404 rather than 401 on purpose: a 401 confirms the endpoint exists and invites
+guessing at the token.
+
+`/api/auth/demo` and `/api/auth/dev-users` are dev-build only and 404 on the
+public site with no token accepted — the demo household is fixture data, and
+the test accounts all share one password. See `src/lib/internal.ts`.
 
 ## Response conventions
 

@@ -26,6 +26,9 @@ every household.
 | `GIGI_BETA_GATE` | *(unset)* | The only thing that raises the gate. `on` ⇒ a code is required; anything else ⇒ the site serves openly. |
 | `GIGI_BETA_CODE` | the shared code | The code testers type when the gate is up. Harmless to leave set while it is down. Gate on with no code ⇒ **503, fail closed**. |
 | `GIGI_SITE_ENV` | `development` | Anything but `production` ⇒ `robots.txt` disallows everything. |
+| `GIGI_INVITE_CODES` | *(unset on dev)* | Codes that let someone CREATE an account, comma- or newline-separated. On the public site, **unset ⇒ sign-up closes**. Log-in never asks for one. |
+| `GIGI_INVITE_GATE` | *(unset)* | `off` opens sign-up to everyone, for when GiGi stops being invite-only. Nothing else overrides the invite requirement. |
+| `GIGI_ADMIN_TOKEN` | *(unset on dev)* | Opens the founder endpoints on the public site (`x-gigi-admin` header or `?token=`). Unset there ⇒ they 404 for everyone. |
 | `GIGI_DEFAULT_MARKET` | `uk` | Market for new households (`uk` \| `se`). |
 | `NODE_VERSION` | `22` | `package.json` engines allows 20–22. |
 | `GIGI_SESSION_SECRET` | 32 random bytes | Signs session cookies. Needed for logins to survive on serverless — see below. |
@@ -73,7 +76,9 @@ variable scoped to **Production** only cannot be seen by a preview build, and a
 dashboard change never reaches a deployment that already exists. Both look
 exactly like never having set it.
 
-Lock it down or remove it before this origin serves the public site.
+On the public site it answers **404** unless the caller presents
+`GIGI_ADMIN_TOKEN` — as an `x-gigi-admin` header or `?token=`. On a dev build
+it stays open to anyone with the URL, as before.
 
 ## Getting into the app
 
@@ -82,9 +87,10 @@ is hidden under 760px, so it survives on a phone). Direct paths:
 
 | Path | What it is |
 | --- | --- |
-| `/login` | Log in. Lists the `GIGI_DEV_USERS` test accounts when they are enabled. |
+| `/login` | Log in. No invite code needed. |
+| `/signup?invite=CODE` | Create an account. The code is prefilled from the link. |
 | `/app/settings` | **Connect Gmail** lives here, and on `/onboarding/connect`. |
-| `/api/diagnostics` | Configuration check for this deployment. |
+| `/api/diagnostics` | Configuration check for this deployment. Needs `GIGI_ADMIN_TOKEN` on the public site. |
 
 ## Render (recommended, and what `render.yaml` provisions)
 
@@ -129,6 +135,29 @@ Next.js app. Two consequences worth knowing:
    and the only thing that makes a deployment crawlable. Taking the beta gate
    off does **not** do it — that separation is deliberate, so an ungated dev
    build can never drift into search results.
+
+Setting it also changes three things by itself, without a second variable:
+
+- **Sign-up becomes invite-only.** Set `GIGI_INVITE_CODES` to the codes you are
+  sending out, or nobody can create an account at all (that is the fail-closed
+  default; `GIGI_INVITE_GATE=off` is the deliberate way to open sign-up).
+- **The founder endpoints close.** Set `GIGI_ADMIN_TOKEN` or you cannot read
+  `/api/waitlist`, `/api/feedback`, `/api/events` or `/api/diagnostics` either.
+- **The demo household and test accounts disappear.** `/api/auth/demo` and
+  `/api/auth/dev-users` 404, and no token opens them.
+
+So the minimum for a real launch is four variables:
+
+```
+GIGI_SITE_ENV=production
+GIGI_INVITE_CODES=...        # the invites you are sending out
+GIGI_ADMIN_TOKEN=...         # openssl rand -hex 32
+GIGI_SESSION_SECRET=...      # openssl rand -hex 32
+```
+
+Check the result with `/api/diagnostics?token=...`: its `invites` block reports
+the mode and how many codes are live (never the codes), and `warnings` names any
+of the above you have missed.
 
 ## Locking yourself out again (testing the gate)
 

@@ -10,7 +10,7 @@ import type { Household } from '@/lib/types';
 export default function Settings() {
   const router = useRouter();
   const [hh, setHh] = useState<Household | null>(null);
-  const [me, setMe] = useState<{ loggedIn: boolean; isDemo: boolean; member?: { name: string; email: string; role: string } } | null>(null);
+  const [me, setMe] = useState<{ loggedIn: boolean; isDemo: boolean; publicSite?: boolean; member?: { name: string; email: string; role: string } } | null>(null);
   const [toast, setToast] = useState('');
   const [feedback, setFeedback] = useState('');
 
@@ -83,9 +83,11 @@ export default function Settings() {
             Reconnect
           </button>
         ) : (
-          <button className="btn btn-ghost btn-sm" style={{ width: '100%' }} onClick={() => { patch({ connectionStatus: 'degraded' }); showToast('Simulated a dropped connection.'); }}>
-            Demo: simulate a dropped connection
-          </button>
+          me && !me.publicSite && (
+            <button className="btn btn-ghost btn-sm" style={{ width: '100%' }} onClick={() => { patch({ connectionStatus: 'degraded' }); showToast('Simulated a dropped connection.'); }}>
+              Demo: simulate a dropped connection
+            </button>
+          )
         )}
       </section>
 
@@ -133,18 +135,25 @@ export default function Settings() {
         </button>
       </section>
 
-      <section className="card stack">
-        <h3>Demo &amp; founder</h3>
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ width: '100%' }}
-          onClick={async () => { await fetch('/api/digest/generate', { method: 'POST' }); trackClient('nightly_run_simulated', { where: 'settings' }); showToast('Reran tonight’s digest.'); }}
-        >
-          Simulate tonight&apos;s 2am run
-        </button>
-        <Link href="/app/metrics" className="link small">Founder metrics →</Link>
-        <Link href="/app/eval" className="link small">Extraction eval →</Link>
-      </section>
+      {/* Internal tooling. The founder screens read endpoints that answer 404 on
+          the public site without GIGI_ADMIN_TOKEN, so linking to them there
+          would only offer a household a pair of dead ends. Rendered only once
+          /api/auth/me has answered, so it cannot flash on the public site
+          during that round-trip. */}
+      {me && !me.publicSite && (
+        <section className="card stack">
+          <h3>Demo &amp; founder</h3>
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ width: '100%' }}
+            onClick={async () => { await fetch('/api/digest/generate', { method: 'POST' }); trackClient('nightly_run_simulated', { where: 'settings' }); showToast('Reran tonight’s digest.'); }}
+          >
+            Simulate tonight&apos;s 2am run
+          </button>
+          <Link href="/app/metrics" className="link small">Founder metrics →</Link>
+          <Link href="/app/eval" className="link small">Extraction eval →</Link>
+        </section>
+      )}
 
       <section className="card stack">
         <h3>Privacy &amp; data</h3>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PhoneFrame from '@/components/PhoneFrame';
 import Icon from '@/components/Icon';
 import { trackClient } from '@/lib/analytics';
@@ -12,10 +12,26 @@ export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [emailless, setEmailless] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [recovery, setRecovery] = useState('');
+  // null until we know: the form must not flash a code field it then removes,
+  // nor let someone fill in a form that was never going to be accepted.
+  const [invite, setInvite] = useState<{ required: boolean; closed: boolean } | null>(null);
+
+  useEffect(() => {
+    // An invite email links to /signup?invite=CODE, so the code is already in
+    // the box when they arrive and the only thing left to type is their name.
+    const fromUrl = new URLSearchParams(window.location.search).get('invite');
+    if (fromUrl) setInviteCode(fromUrl);
+
+    fetch('/api/auth/invite')
+      .then((r) => r.json())
+      .then((j) => setInvite({ required: Boolean(j.required), closed: Boolean(j.closed) }))
+      .catch(() => setInvite({ required: false, closed: false }));
+  }, []);
 
   async function submit() {
     setError('');
@@ -23,7 +39,7 @@ export default function Signup() {
     const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email: emailless ? '' : email, password }),
+      body: JSON.stringify({ name, email: emailless ? '' : email, password, inviteCode }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -64,16 +80,58 @@ export default function Signup() {
     );
   }
 
+  // Sign-ups are off entirely: say so and point at the waitlist, rather than
+  // letting someone fill in a form whose submit can only fail.
+  if (invite?.closed) {
+    return (
+      <PhoneFrame>
+        <div className="screen">
+          <div className="center" style={{ marginBottom: 20, marginTop: 12 }}>
+            <div style={{ color: 'var(--brand)' }}><Icon name="lock" size={30} /></div>
+            <h1 style={{ marginTop: 10 }}>GiGi is invite-only</h1>
+            <p className="small" style={{ margin: 0 }}>
+              We’re letting households in a few at a time. Join the waitlist and we’ll send you
+              an invite code as soon as there’s room.
+            </p>
+          </div>
+          <Link href="/#faq" className="btn btn-primary" style={{ marginTop: 4 }}>
+            Join the waitlist →
+          </Link>
+          <p className="small center" style={{ marginTop: 16 }}>
+            Already have an account? <Link href="/login" className="link">Log in</Link>
+          </p>
+        </div>
+      </PhoneFrame>
+    );
+  }
+
+  const needsInvite = invite?.required ?? false;
+  const ready = Boolean(name) && (emailless || Boolean(email)) && password.length >= 6 && (!needsInvite || Boolean(inviteCode.trim()));
+
   return (
     <PhoneFrame>
       <div className="screen">
         <div className="center" style={{ marginBottom: 24, marginTop: 12 }}>
           <span className="logo-mark" style={{ display: 'inline-grid', width: 44, height: 44, fontSize: 22 }}>G</span>
           <h1 style={{ marginTop: 14 }}>Create your account</h1>
-          <p className="small" style={{ margin: 0 }}>Two weeks free. No card needed.</p>
+          <p className="small" style={{ margin: 0 }}>
+            {needsInvite ? 'Enter the invite code we emailed you.' : 'Two weeks free. No card needed.'}
+          </p>
         </div>
 
         <div className="card stack">
+          {needsInvite && (
+            <label className="field" style={{ marginBottom: 0 }}>
+              <span>Invite code</span>
+              <input
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                placeholder="GIGI-XXXX-XXXX"
+                autoCapitalize="characters"
+                spellCheck={false}
+              />
+            </label>
+          )}
           <label className="field" style={{ marginBottom: 0 }}>
             <span>First name</span>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kerstin" />
@@ -90,7 +148,7 @@ export default function Signup() {
               onKeyDown={(e) => { if (e.key === 'Enter') submit(); }} />
           </label>
           {error && <p className="small" style={{ color: 'var(--danger)', margin: 0 }}>{error}</p>}
-          <button className="btn btn-primary" disabled={!name || (!emailless && !email) || password.length < 6 || busy} onClick={submit}>
+          <button className="btn btn-primary" disabled={!ready || busy} onClick={submit}>
             {busy ? 'Creating…' : 'Create account →'}
           </button>
         </div>
