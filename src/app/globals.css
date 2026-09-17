@@ -93,11 +93,6 @@ a { color: inherit; text-decoration: none; }
 .screen.pad-bottom-sm { padding-bottom: 28px; }
 
 /* --- Typography --- */
-.wordmark {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
 h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
 h1 { font-size: 26px; line-height: 1.15; margin: 0 0 6px; }
 h2 { font-size: 20px; line-height: 1.2; margin: 0 0 8px; }
@@ -271,15 +266,14 @@ textarea { min-height: 92px; resize: vertical; }
 }
 
 
-/* --- Wordmark (shared: app sidebar, auth screens, landing) --- */
-.logo { display: flex; align-items: center; gap: 10px; }
-.logo-mark {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: var(--black); color: #fff;
-  display: grid; place-items: center;
-  font-family: var(--font-display); font-weight: 600; font-size: 18px;
-}
-.logo-word { font-family: var(--font-display); font-weight: 600; font-size: 22px; letter-spacing: -0.02em; }
+/* --- Logo (shared: app sidebar, auth screens, privacy, beta gate) ---
+   The mark itself is the real wordmark image (src/components/Logo.tsx), which
+   sizes itself by height. These are only the wrappers that place it. The
+   `.logo-mark` / `.logo-word` pair that used to live here — an ink-black square
+   with a serif G, plus "GiGi" set in the body serif — was scaffolding from
+   before the brand existed, and every screen that used it showed a different
+   logo from the landing page. */
+.logo { display: inline-flex; align-items: center; }
 
 /* --- Command bar (ambient voice + text input) --- */
 .cmdbar {
@@ -457,7 +451,7 @@ a.card:active, button.card:active { transform: translateY(0) scale(0.995); }
   background: rgba(255,255,255,0.55);
   backdrop-filter: blur(8px);
 }
-.sidebar .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 22px; }
+.sidebar .brand { display: flex; align-items: center; padding: 0 8px 22px; }
 .side-nav { display: flex; flex-direction: column; gap: 4px; }
 .side-nav a {
   display: flex; align-items: center; gap: 12px;
@@ -639,8 +633,13 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
   }
 }
 
-.auth-brand { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 30px; }
-.auth-brand .wordmark { font-size: 22px; }
+.auth-brand { display: inline-flex; align-items: center; margin-bottom: 30px; }
+/* The logo above a centred auth heading. The image is a block, so it needs to
+   be centred explicitly rather than inheriting `text-align` from `.center`.
+   Hidden once the side panel is showing, which carries the logo already — the
+   same one-or-the-other rule as the onboarding progress bar. */
+.auth-headmark { margin: 0 auto 4px; }
+@media (min-width: 900px) { .auth-headmark { display: none; } }
 .auth-aside-title {
   font-size: clamp(26px, 2.6vw, 34px);
   line-height: 1.18;

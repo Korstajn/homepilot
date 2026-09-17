@@ -35,7 +35,7 @@ export default function LandingNav() {
     <nav id="nav" className={scrolled ? 'scrolled' : undefined}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
         <Link href="/" className="nav-logo">
-          <Image src="/images/gigi-logo.png" alt="GiGi" width={990} height={579} priority />
+          <Image src="/images/gigi-logo-sm.png" alt="GiGi" width={410} height={240} priority />
         </Link>
         <div className="nav-links">
           <Link href={onHome ? '#what' : '/#what'} onClick={onHome ? onAnchorClick('what') : undefined}>

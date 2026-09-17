@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 
 export const metadata = { title: 'GiGi — Privacy' };
 
@@ -10,9 +11,8 @@ export default function Privacy() {
   return (
     <div className="docwrap">
       <div className="docbar">
-        <Link href="/" className="logo">
-          <span className="logo-mark">G</span>
-          <span className="logo-word">GiGi</span>
+        <Link href="/" className="logo" aria-label="GiGi — home">
+          <Logo height={26} />
         </Link>
         <Link href="/" className="pill">← Back</Link>
       </div>

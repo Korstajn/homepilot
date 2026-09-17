@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AuthFrame from '@/components/AuthFrame';
+import Logo from '@/components/Logo';
 import Icon from '@/components/Icon';
 import { trackClient } from '@/lib/analytics';
 
@@ -62,7 +63,7 @@ export default function Join({ params }: { params: { token: string } }) {
     <AuthFrame>
       <div className="screen">
         <div className="center" style={{ marginBottom: 20, marginTop: 12 }}>
-          <span className="logo-mark" style={{ display: 'inline-grid', width: 44, height: 44, fontSize: 22 }}>G</span>
+          <Logo height={34} className="auth-headmark" />
           <h1 style={{ marginTop: 14 }}>Join the household</h1>
         </div>
 

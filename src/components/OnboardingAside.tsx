@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Logo from './Logo';
 
 /**
  * The desktop panel beside the onboarding form: the four steps, with the
@@ -33,9 +34,8 @@ export default function OnboardingAside() {
 
   return (
     <>
-      <Link href="/" className="auth-brand">
-        <span className="logo-mark">G</span>
-        <span className="wordmark">GiGi</span>
+      <Link href="/" className="auth-brand" aria-label="GiGi — home">
+        <Logo height={30} />
       </Link>
 
       <h2 className="auth-aside-title">Four steps, then GiGi runs on its own.</h2>

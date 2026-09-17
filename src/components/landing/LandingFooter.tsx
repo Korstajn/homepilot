@@ -6,7 +6,7 @@ export default function LandingFooter() {
   return (
     <footer>
       <div className="footer-logo">
-        <Image src="/images/gigi-logo-bone.png" alt="GiGi" width={990} height={579} />
+        <Image src="/images/gigi-logo-bone-sm.png" alt="GiGi" width={410} height={240} />
       </div>
       <div className="footer-links">
         <Link href="/privacy">Privacy policy</Link>

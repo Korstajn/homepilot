@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AuthFrame from '@/components/AuthFrame';
+import Logo from '@/components/Logo';
 import Icon from '@/components/Icon';
 import { trackClient } from '@/lib/analytics';
 
@@ -112,7 +113,7 @@ export default function Signup() {
     <AuthFrame>
       <div className="screen">
         <div className="center" style={{ marginBottom: 24, marginTop: 12 }}>
-          <span className="logo-mark" style={{ display: 'inline-grid', width: 44, height: 44, fontSize: 22 }}>G</span>
+          <Logo height={34} className="auth-headmark" />
           <h1 style={{ marginTop: 14 }}>Create your account</h1>
           <p className="small" style={{ margin: 0 }}>
             {needsInvite ? 'Enter the invite code we emailed you.' : 'Two weeks free. No card needed.'}

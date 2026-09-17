@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import BetaGateForm from '@/components/landing/BetaGateForm';
+import Logo from '@/components/Logo';
 import { BETA_COOKIE, gateMode, hasValidBetaCookie, safeNextPath } from '@/lib/beta';
 import '../landing.css';
 
@@ -30,10 +31,7 @@ export default async function BetaGatePage({
         <div className="hero-dot-grid" />
         <div className="gate-card">
           <div className="gate-logo">
-            <div className="logo-mark">
-              <span>G</span>
-            </div>
-            GiGi
+            <Logo height={30} priority />
           </div>
           <div className="gate-tag">Private beta</div>
           <h1 className="gate-title">This build is still in development.</h1>

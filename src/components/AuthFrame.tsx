@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Logo from './Logo';
 
 /**
  * The frame for every page someone reaches BEFORE they are inside the app:
@@ -46,9 +47,8 @@ export default function AuthFrame({
 function DefaultAside() {
   return (
     <>
-      <Link href="/" className="auth-brand">
-        <span className="logo-mark">G</span>
-        <span className="wordmark">GiGi</span>
+      <Link href="/" className="auth-brand" aria-label="GiGi — home">
+        <Logo height={30} />
       </Link>
 
       <h2 className="auth-aside-title">

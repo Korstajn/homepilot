@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { NAV } from '@/lib/nav';
 import Icon from './Icon';
+import Logo from './Logo';
 import ViewToggle from './ViewToggle';
 
 export default function Sidebar({ view, onView }: { view: 'desktop' | 'mobile'; onView: (v: 'desktop' | 'mobile') => void }) {
@@ -21,10 +22,9 @@ export default function Sidebar({ view, onView }: { view: 'desktop' | 'mobile'; 
 
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <span className="logo-mark" style={{ width: 34, height: 34, fontSize: 18 }}>G</span>
-        <span className="logo-word" style={{ fontSize: 22 }}>GiGi</span>
-      </div>
+      <Link href="/app/digest" className="brand" aria-label="GiGi">
+        <Logo height={26} priority />
+      </Link>
 
       <nav className="side-nav">
         {items.map((t) => {
