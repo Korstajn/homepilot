@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { addFeedback, listFeedback, track } from '@/lib/store';
 import { resolveHousehold } from '@/lib/auth';
+import { guardInternal } from '@/lib/internal';
 
 // In-app feedback channel — beta users' reports of wrong extraction are the
 // training data (P0 gap the plan missed).
@@ -22,6 +23,14 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: fb.id });
 }
 
-export async function GET() {
+/**
+ * Every household's feedback in one list, for the founder. It is users' own
+ * words about their own bills, so on the public site this needs
+ * GIGI_ADMIN_TOKEN (src/lib/internal.ts).
+ */
+export async function GET(req: Request) {
+  const denied = guardInternal(req);
+  if (denied) return denied;
+
   return NextResponse.json({ feedback: listFeedback() });
 }

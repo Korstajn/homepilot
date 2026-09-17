@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolveMember, resolveHousehold, currentMember, capabilitiesFor, sessionState } from '@/lib/auth';
 import { getDefaultHousehold, displayFor } from '@/lib/store';
+import { isPublicSite } from '@/lib/beta';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,5 +21,9 @@ export async function GET() {
     household: { id: hh.id, ownerName: hh.ownerName },
     member: { name: display.name, role: member.role, email: display.email ?? null },
     capabilities: capabilitiesFor(member.role),
+    // Whether this deployment is the public site. The app's internal affordances
+    // — the founder metrics and eval links — are client-rendered, and
+    // GIGI_SITE_ENV is a server-only variable they cannot read for themselves.
+    publicSite: isPublicSite(),
   });
 }

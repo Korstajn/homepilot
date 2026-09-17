@@ -1,19 +1,22 @@
 import { NextResponse } from 'next/server';
 import { devUserSpecs, devUsersEnabled } from '@/lib/dev-users';
 import { secretSource } from '@/lib/secrets';
+import { guardNonPublic } from '@/lib/internal';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Which test accounts this deployment has, so the login screen can list them
- * instead of a tester having to guess the addresses.
+ * Which test accounts this deployment has.
  *
- * Returns addresses and names only — never GIGI_DEV_PASSWORD, and nothing at
- * all unless test accounts are switched on. `sessionSecret` reports which key
- * material is signing sessions, because 'ephemeral' is the one state where
- * logins will not survive on serverless and it is otherwise invisible.
+ * Dev builds only. GIGI_DEV_PASSWORD is shared by every test account, so on a
+ * public origin this route is half of a working credential pair — it names the
+ * addresses that password opens. The login screen no longer lists them either;
+ * this is for working on the build.
  */
 export async function GET() {
+  const denied = guardNonPublic();
+  if (denied) return denied;
+
   if (!devUsersEnabled()) return NextResponse.json({ enabled: false, users: [] });
   return NextResponse.json({
     enabled: true,

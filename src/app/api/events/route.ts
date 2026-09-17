@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { listEvents, track } from '@/lib/store';
 import { resolveHousehold } from '@/lib/auth';
+import { guardInternal } from '@/lib/internal';
 
 // Client-side instrumentation sink. Every metric in §7 of the MVP doc depends
 // on this existing from day one, not retrofitted.
@@ -12,8 +13,13 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true });
 }
 
-// Lightweight metrics view for the founder (also powers /app/metrics).
-export async function GET() {
+// Lightweight metrics view for the founder (also powers /app/metrics). The
+// event stream is the whole product's usage in one place, so on the public site
+// this needs GIGI_ADMIN_TOKEN (src/lib/internal.ts).
+export async function GET(req: Request) {
+  const denied = guardInternal(req);
+  if (denied) return denied;
+
   const events = listEvents();
   const counts: Record<string, number> = {};
   for (const e of events) counts[e.name] = (counts[e.name] ?? 0) + 1;

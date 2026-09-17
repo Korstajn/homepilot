@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import BetaBar from '@/components/landing/BetaBar';
 import LandingFooter from '@/components/landing/LandingFooter';
 import LandingNav from '@/components/landing/LandingNav';
 import Hook from '@/components/story/Hook';
@@ -8,7 +7,6 @@ import ProductChapter from '@/components/story/ProductChapter';
 import Realisation from '@/components/story/Realisation';
 import StoryCta from '@/components/story/StoryCta';
 import ThingsGrid from '@/components/story/ThingsGrid';
-import { isPublicSite } from '@/lib/beta';
 import '../landing.css';
 
 export const metadata: Metadata = {
@@ -25,10 +23,8 @@ export const metadata: Metadata = {
  * the component, styling shared through landing.css under `.landing`.
  */
 export default function Story() {
-  const betaBar = !isPublicSite();
-
   return (
-    <div className={`landing${betaBar ? ' has-beta-bar' : ''}`}>
+    <div className="landing">
       <LandingNav />
       <Hook />
       <PhotoReality />
@@ -37,7 +33,6 @@ export default function Story() {
       <ThingsGrid />
       <StoryCta />
       <LandingFooter />
-      <BetaBar />
     </div>
   );
 }

@@ -38,22 +38,43 @@ The gate is opt-in and currently down, so the deployed dev build opens normally
 either way. Set `GIGI_BETA_GATE=on` and every path redirects to `/beta` until a
 visitor enters the shared code, which then sticks to that browser for 30 days.
 
-Gated or not, a **"Beta build · Open the app →"** pill in the bottom-right
-corner of the landing page takes you into the product — the public landing
-design has no log-in link, so that pill (and typing `/login` or `/app` directly)
-is how testers get in. It never renders when the gate is off.
+The landing page has no app entry point at all — no log-in link, and no
+"Beta build" pill; it is the public marketing design and nothing else. Type
+`/login` or `/app` directly to get into the product.
+
+## Invite codes
+
+Creating an account needs an invite code (`src/lib/invite.ts`). Logging in never
+does — an invite is spent once the account exists.
+
+- `GIGI_INVITE_CODES` is the list of codes that work, comma- or newline-
+  separated, compared case-insensitively and ignoring dashes and spaces.
+- On the **public site** (`GIGI_SITE_ENV=production`) invites are required by
+  default: no codes configured means sign-up **closes**, never that it opens.
+- On a dev build, no codes configured means sign-up is open, as before.
+- `GIGI_INVITE_GATE=off` opens sign-up to everyone, for the day GiGi stops
+  being invite-only.
+
+An invite email should link straight to `/signup?invite=CODE`, which puts the
+code in the box for them.
+
+Codes are shared secrets, not single-use tickets: the store is in-memory, so
+nothing can enforce one-signup-per-code until the Postgres swap. Issue one code
+per recipient if you want to know who used it.
 
 ## Logging in
 
 The build now has a real **sign-up / log-in** with sessions:
 
-- **`/signup`** — create an account (name, email, password). You get your own
-  fresh household (seeded with a couple of example "found" bills) and land in
-  onboarding.
-- **`/login`** — log back into that account, or hit **"Just show me the demo"**
-  to explore the ready-made demo household with no account.
+- **`/signup`** — create an account (invite code, name, email, password). You get
+  your own fresh household (seeded with a couple of example "found" bills) and
+  land in onboarding.
+- **`/login`** — log back into that account. No invite code is asked for here.
+- The demo household and the test-account list are no longer offered anywhere in
+  the UI. `/api/auth/demo` and `/api/auth/dev-users` still work on a dev build
+  for working on the product, and both 404 on the public site.
 - The landing page itself has no log-in link (it is the public marketing
-  design); use the beta pill, or go to `/login` or `/app` directly.
+  design); go to `/login` or `/app` directly.
 - Log out from **Settings**. Sessions are a signed cookie; passwords are scrypt-
   hashed in the in-memory store (production swaps this for Supabase Auth).
 
