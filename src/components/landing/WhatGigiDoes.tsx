@@ -1,5 +1,11 @@
 import Reveal from './Reveal';
 
+const TIME_STATS = [
+  { val: '4.75 hrs', label: 'a week the average UK adult spends on life admin' },
+  { val: '~100', label: 'life admin tasks put off every year' },
+  { val: '13 days', label: 'a year lost to admin and errands' },
+];
+
 // The verticals GiGi covers, each shown through a line she would actually send.
 const VERTICALS = [
   {
@@ -38,7 +44,26 @@ export default function WhatGigiDoes() {
   return (
     <section className="section" id="what">
       <div className="section-inner">
-        <Reveal className="what-intro">
+        <Reveal className="what-intro" style={{ marginBottom: 34 }}>
+          <div className="sec-tag">The cost of household admin</div>
+          <h2 className="sec-h">
+            It adds up to
+            <br />
+            <em>weeks of your life.</em>
+          </h2>
+        </Reveal>
+
+        <Reveal className="time-stats">
+          {TIME_STATS.map((s) => (
+            <div className="tstat" key={s.val}>
+              <div className="tstat-val">{s.val}</div>
+              <div className="tstat-label">{s.label}</div>
+            </div>
+          ))}
+        </Reveal>
+        <Reveal className="tstat-source">Sources: Smart Energy GB; Nationwide &quot;life admin&quot; research.</Reveal>
+
+        <Reveal className="what-intro" style={{ marginTop: 20 }}>
           <div className="sec-tag">What GiGi does</div>
           <h2 className="sec-h">
             Some of the many things

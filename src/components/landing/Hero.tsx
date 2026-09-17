@@ -12,6 +12,39 @@ const PROOF_AVATARS = [
   { initials: 'AW', color: '#92400E' },
 ];
 
+const FLOAT_CARDS = [
+  {
+    style: { top: '20%', right: -10 },
+    label: 'THIS WEEK',
+    value: '£168',
+    sub: 'saved on broadband',
+    subColor: '#2D6A4F',
+  },
+  {
+    style: { bottom: '6%', left: -16 },
+    label: 'REMINDER',
+    value: 'Book babysitter',
+    valueSize: 13,
+    sub: 'Thu 7pm',
+  },
+  {
+    style: { top: '52%', left: -38 },
+    label: 'HEADS UP',
+    value: "Ella's passport",
+    valueSize: 13,
+    sub: 'expires September',
+    subColor: '#92400E',
+  },
+  {
+    style: { bottom: '16%', right: -30 },
+    label: 'SATURDAY',
+    value: "Ines' birthday party",
+    valueSize: 13,
+    sub: 'Buy a gift?',
+    subColor: '#3730A3',
+  },
+];
+
 export default function Hero() {
   return (
     <section id="hero">
@@ -19,16 +52,18 @@ export default function Hero() {
       <div className="hero-glow" />
       <div className="hero-inner">
         <Reveal visible>
-          <div className="hero-badge">GiGi — your proactive chief of staff for household admin</div>
+          <div className="hero-eyebrow">
+            Mental load, <em>lifted.</em>
+          </div>
           <h1 className="hero-h1">
-            Mental load
+            A calmer home,
             <br />
-            <em>lifted.</em>
+            <em>a happier you.</em>
           </h1>
+          <div className="hero-badge">The household operating system every family needs</div>
           <p className="hero-sub">
-            One notification every morning with what needs managing — kids&apos; schedules, family
-            logistics, the everyday admin. Tell GiGi what she can take off your plate, and she&apos;ll
-            manage it on your behalf, with your approval.
+            One place for the whole household&apos;s to-do list — delegate to GiGi, your proactive
+            chief of staff for household admin, or to anyone else in your household.
           </p>
           <div className="hero-actions" style={{ justifyContent: 'center' }}>
             <button
@@ -53,20 +88,17 @@ export default function Hero() {
         </Reveal>
 
         <Reveal visible className="hero-visual">
-          <div className="float-card" style={{ top: '6%', right: -10 }}>
-            <div className="fc-label">THIS WEEK</div>
-            <div className="fc-val">£168</div>
-            <div className="fc-sub" style={{ color: '#2D6A4F' }}>
-              saved on broadband
+          {FLOAT_CARDS.map((c) => (
+            <div className="float-card" style={c.style} key={c.label}>
+              <div className="fc-label">{c.label}</div>
+              <div className="fc-val" style={c.valueSize ? { fontSize: c.valueSize } : undefined}>
+                {c.value}
+              </div>
+              <div className="fc-sub" style={c.subColor ? { color: c.subColor } : undefined}>
+                {c.sub}
+              </div>
             </div>
-          </div>
-          <div className="float-card" style={{ bottom: '6%', left: -16 }}>
-            <div className="fc-label">REMINDER</div>
-            <div className="fc-val" style={{ fontSize: 13 }}>
-              Book babysitter
-            </div>
-            <div className="fc-sub">Thu 7pm</div>
-          </div>
+          ))}
           <PhoneMock />
         </Reveal>
       </div>

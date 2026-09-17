@@ -27,7 +27,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'GiGi — Mental load lifted. Family admin in one place.',
+  title: 'GiGi — A calmer home, a happier you. Mental load, lifted.',
   description:
     'GiGi is a proactive chief of staff for the household. One 7am digest, four things that matter, one-tap approvals.',
 };
