@@ -512,7 +512,7 @@ html:has(.landing){scroll-behavior:smooth;scroll-padding-top:80px;}
    ------------------------------------------------------------------------ */
 .landing .gate-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 24px;position:relative;}
 .landing .gate-card{position:relative;z-index:1;width:100%;max-width:420px;background:var(--white);border:1px solid var(--border);border-radius:var(--rl);padding:36px 32px;box-shadow:var(--sh-lg);text-align:center;}
-.landing .gate-logo{display:flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font-serif), serif;font-size:26px;letter-spacing:-0.02em;margin-bottom:20px;}
+.landing .gate-logo{display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
 .landing .gate-tag{font-family:var(--font-mono), monospace;font-size:11px;font-weight:500;letter-spacing:.12em;color:var(--sage-m);text-transform:uppercase;margin-bottom:10px;}
 .landing .gate-title{font-family:var(--font-serif), serif;font-size:30px;line-height:1.1;letter-spacing:-0.02em;margin-bottom:10px;}
 .landing .gate-sub{font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:22px;}

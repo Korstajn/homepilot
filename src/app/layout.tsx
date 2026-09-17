@@ -26,10 +26,33 @@ const mono = JetBrains_Mono({
   variable: '--font-mono',
 });
 
+const TITLE = 'GiGi — A calmer home, a happier you. Mental load, lifted.';
+const DESCRIPTION =
+  'GiGi is a proactive chief of staff for the household. One 7am digest, four things that matter, one-tap approvals.';
+
 export const metadata: Metadata = {
-  title: 'GiGi — A calmer home, a happier you. Mental load, lifted.',
-  description:
-    'GiGi is a proactive chief of staff for the household. One 7am digest, four things that matter, one-tap approvals.',
+  // Needed for Next to resolve the absolute URLs Open Graph requires. Read from
+  // the environment so a preview deployment advertises itself rather than the
+  // production domain.
+  metadataBase: new URL(process.env.GIGI_SITE_URL || 'https://getgigiapp.com'),
+  title: TITLE,
+  description: DESCRIPTION,
+  // Without these, sharing the site anywhere — a message, a post, a Slack —
+  // renders a bare URL with no title or picture. The image is the existing
+  // wordmark; nothing new is invented for it.
+  openGraph: {
+    type: 'website',
+    siteName: 'GiGi',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [{ url: '/images/gigi-logo.png', width: 990, height: 579, alt: 'GiGi' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ['/images/gigi-logo.png'],
+  },
 };
 
 export const viewport: Viewport = {

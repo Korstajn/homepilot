@@ -1,16 +1,22 @@
 import Link from 'next/link';
-import PhoneFrame from '@/components/PhoneFrame';
+import Logo from '@/components/Logo';
 
 export const metadata = { title: 'GiGi — Privacy' };
 
+// This is a document to read, not an interface to use, so it gets a document
+// layout rather than the phone frame the app screens share. A privacy policy
+// squeezed into a 440px column on a desktop is a very long page that reads as
+// though nobody expected it to be read — the opposite of the point.
 export default function Privacy() {
   return (
-    <PhoneFrame>
-    <div className="screen pad-bottom-sm">
-      <div className="row between" style={{ marginBottom: 20 }}>
-        <span className="wordmark" style={{ fontSize: 20 }}>GiGi</span>
+    <div className="docwrap">
+      <div className="docbar">
+        <Link href="/" className="logo" aria-label="GiGi — home">
+          <Logo height={26} />
+        </Link>
         <Link href="/" className="pill">← Back</Link>
       </div>
+    <div className="doc">
       <h1>Privacy, in plain words</h1>
       <p className="small muted">Beta draft · not legal advice · v0.1</p>
 
@@ -57,7 +63,7 @@ export default function Privacy() {
         Questions? privacy@getgigiapp.com
       </p>
     </div>
-    </PhoneFrame>
+    </div>
   );
 }
 

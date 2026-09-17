@@ -5,6 +5,7 @@ import { trackClient } from '@/lib/analytics';
 import CommandBar from '@/components/CommandBar';
 import ScreenHeader from '@/components/ScreenHeader';
 import SchoolScanner from '@/components/SchoolScanner';
+import WeatherStrip from '@/components/WeatherStrip';
 import type { Child, Digest, DigestItem } from '@/lib/types';
 
 export default function KidsTravel() {
@@ -51,6 +52,8 @@ export default function KidsTravel() {
           <button className={`choice ${filter === 'all' ? 'selected' : ''}`} onClick={() => setFilter('all')}>Both</button>
         </div>
       )}
+
+      <WeatherStrip />
 
       {passportAlerts.map((a) => (
         <div key={a.child} className="banner" style={{ background: '#f7e7ea', color: '#8a2c46', border: '1px solid #eccdd5', marginBottom: 12 }}>

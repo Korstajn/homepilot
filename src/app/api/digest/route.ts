@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTodayDigest, markDigestOpened, regenerateDigest, track } from '@/lib/store';
 import { resolveHousehold, resolveMember, can } from '@/lib/auth';
+import { getForecast } from '@/lib/weather';
 import type { Digest } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -8,6 +9,11 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const hh = resolveHousehold();
   const me = resolveMember();
+  // Warm the forecast cache before building. `buildDigest` is synchronous by
+  // design, so this is the one place that goes to the network — and it resolves
+  // to null quickly and quietly if the lookup fails, which simply means no
+  // weather item today rather than a slow or broken digest.
+  await getForecast(hh);
   let digest = getTodayDigest(hh.id);
   if (!digest) digest = regenerateDigest(hh.id);
 

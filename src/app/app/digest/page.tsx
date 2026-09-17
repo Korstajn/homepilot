@@ -8,6 +8,7 @@ import CommandBar from '@/components/CommandBar';
 import ScreenHeader from '@/components/ScreenHeader';
 import CountUp from '@/components/CountUp';
 import { SkeletonScreen } from '@/components/Skeleton';
+import WeatherStrip from '@/components/WeatherStrip';
 import type { Currency, Digest, DigestItem, Household } from '@/lib/types';
 
 export default function DigestScreen() {
@@ -87,6 +88,8 @@ export default function DigestScreen() {
           ● GiGi is running. Bills, school &amp; travel monitored around the clock.
         </div>
       )}
+
+      <WeatherStrip compact />
 
       {value && (
         <>
@@ -248,11 +251,14 @@ function FeedbackSheet({ item, onClose, onSent }: { item: DigestItem; onClose: (
   }
 
   return (
-    <div
-      style={{ position: 'absolute', inset: 0, background: 'rgba(38,34,30,0.4)', display: 'flex', alignItems: 'flex-end', zIndex: 20 }}
-      onClick={onClose}
-    >
-      <div className="card stack" style={{ width: '100%', borderRadius: '20px 20px 0 0' }} onClick={(e) => e.stopPropagation()}>
+    <div className="sheet-backdrop" onClick={onClose} role="presentation">
+      <div
+        className="card stack sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Report a mistake"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3>What&apos;s wrong here?</h3>
         <p className="small" style={{ margin: 0 }}>&ldquo;{item.line}&rdquo;</p>
         <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="e.g. The amount is wrong — it's actually £48." />

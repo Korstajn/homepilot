@@ -32,6 +32,7 @@ import type {
 import { buildDigest } from './digest';
 import { buildCalendar, findCalendarEvent } from './calendar';
 import { DEFAULT_HANDED_OVER } from './handover';
+import { cachedForecast } from './weather';
 import { devCalendarToken, devIds, devPassword, devPasswordHash, devUserSpecs } from './dev-users';
 
 interface DB {
@@ -843,7 +844,22 @@ export function regenerateDigest(householdId: string): Digest | undefined {
   const actions = db.actions.filter((a) => a.householdId === householdId);
   // Events and children are signals, not decoration: without them the digest
   // can only ever talk about bills.
-  const fresh = buildDigest(household, bills, actions, householdCalendar(householdId), listChildren(householdId));
+  const children = listChildren(householdId);
+  // The forecast is read from cache, never fetched here: `regenerateDigest` is
+  // called from a dozen synchronous places and a network round-trip in the
+  // middle of them would make all of them async. `/api/digest` warms the cache
+  // with an await before regenerating, so the path a user actually travels has
+  // today's weather; every other path degrades to no weather item, which is the
+  // same silence a household with no postcode gets.
+  const weather = cachedForecast(household);
+  const fresh = buildDigest(
+    household,
+    bills,
+    actions,
+    householdCalendar(householdId),
+    children,
+    weather,
+  );
   const today = isoDate();
   const existingIdx = db.digests.findIndex(
     (d) => d.householdId === householdId && d.date === today,

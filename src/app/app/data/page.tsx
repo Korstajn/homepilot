@@ -15,6 +15,7 @@ const ACTOR: Record<ProcessingActor, { label: string; color: string }> = {
   gigi_ai: { label: 'GiGi AI (EU)', color: 'var(--accent)' },
   email_service: { label: 'Email service', color: 'var(--muted)' },
   google: { label: 'Gmail (Google)', color: 'var(--muted)' },
+  weather_service: { label: 'Weather service (EU)', color: 'var(--muted)' },
   concierge: { label: 'Concierge', color: 'var(--accent)' },
 };
 

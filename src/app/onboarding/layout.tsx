@@ -1,5 +1,6 @@
-import PhoneFrame from '@/components/PhoneFrame';
+import AuthFrame from '@/components/AuthFrame';
+import OnboardingAside from '@/components/OnboardingAside';
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
-  return <PhoneFrame>{children}</PhoneFrame>;
+  return <AuthFrame aside={<OnboardingAside />}>{children}</AuthFrame>;
 }

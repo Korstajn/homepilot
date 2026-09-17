@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import PhoneFrame from '@/components/PhoneFrame';
+import AuthFrame from '@/components/AuthFrame';
+import Logo from '@/components/Logo';
 import { trackClient } from '@/lib/analytics';
 
 export default function Login() {
@@ -38,10 +39,10 @@ export default function Login() {
   }
 
   return (
-    <PhoneFrame>
+    <AuthFrame>
       <div className="screen">
         <div className="center" style={{ marginBottom: 24, marginTop: 12 }}>
-          <span className="logo-mark" style={{ display: 'inline-grid', width: 44, height: 44, fontSize: 22 }}>G</span>
+          <Logo height={34} className="auth-headmark" />
           <h1 style={{ marginTop: 14 }}>Welcome back</h1>
           <p className="small" style={{ margin: 0 }}>Log in to your household.</p>
         </div>
@@ -79,6 +80,6 @@ export default function Login() {
           New here? <Link href="/signup" className="link">Create an account</Link>
         </p>
       </div>
-    </PhoneFrame>
+    </AuthFrame>
   );
 }

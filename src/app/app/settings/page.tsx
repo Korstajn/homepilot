@@ -150,8 +150,13 @@ export default function Settings() {
           >
             Simulate tonight&apos;s 2am run
           </button>
-          <Link href="/app/metrics" className="link small">Founder metrics →</Link>
-          <Link href="/app/eval" className="link small">Extraction eval →</Link>
+          {/* An <a> is inline, so `.stack`'s margin-top never applied to these
+              two and they ran together as "Founder metrics →Extraction eval →".
+              A row with a gap is what was meant. */}
+          <div className="row" style={{ gap: 16, flexWrap: 'wrap' }}>
+            <Link href="/app/metrics" className="link small">Founder metrics →</Link>
+            <Link href="/app/eval" className="link small">Extraction eval →</Link>
+          </div>
         </section>
       )}
 
