@@ -1,0 +1,16 @@
+<!--
+  The browser-tab icon. App Router serves any src/app/icon.* as the favicon, so
+  this file is the whole of it — there was none before, which is why every page
+  load answered a 404 for /favicon.ico and every tab showed a blank page icon.
+
+  It is the same mark the app draws in CSS as `.logo-mark`: the ink-black
+  rounded square with a serif G. Drawn as SVG rather than exported as a PNG so
+  it stays sharp at every size, weighs a few hundred bytes, and changes with the
+  brand tokens rather than needing a re-export.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="GiGi">
+  <rect width="64" height="64" rx="17" fill="#1c1b19"/>
+  <text x="32" y="33" fill="#f1ede4"
+        font-family="Iowan Old Style, Palatino Linotype, Palatino, Georgia, Times New Roman, serif"
+        font-size="40" font-weight="600" text-anchor="middle" dominant-baseline="central">G</text>
+</svg>
