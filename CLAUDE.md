@@ -125,6 +125,42 @@ items the household ticked, and only from the plan the server itself produced.
 and recall per field; gate P0 on **≥95% precision on amount and renewal_date**,
 null-rate reported separately.
 
+## Prompt 3 — The assistant (runs when someone asks GiGi something)
+
+**Job:** answer one spoken or typed question from the household, out loud.
+
+Unlike the two prompts above, this one is allowed to **go and look**
+(`src/lib/assistant-tools.ts`). It has two tools and no others:
+
+- `check_weather` — the household's forecast and the clothing advice already
+  derived from it (`src/lib/weather.ts`).
+- `check_inbox` — a header-only Gmail search over the connected inbox:
+  **senders and subject lines, never a message body**, triaged deterministically
+  in `src/lib/inbox.ts` before the model sees it.
+
+**Hard rules:**
+- **Nothing is fetched until the question needs it.** Prefetching the forecast
+  and an inbox scan into every question would mean GiGi reads mail nobody asked
+  it to read. The tool call *is* the household asking.
+- **The guards live in the executor, not in the prompt.** The model picks a tool
+  and arguments; it never receives a token, a household id or a URL. Whether an
+  inbox is connected, how far back a search may reach, whether this member may
+  see money — all enforced in code, where an instruction to the model cannot
+  talk its way past them.
+- **The reach is bounded.** At most 30 days and 25 subject lines per question,
+  and only mail whose subject carries an obligation (`ATTENTION_TERMS`) — a
+  deadline, a payment, a booking, a form. Personal correspondence is not
+  searched, which is a property of the query rather than of a later filter.
+- **The trust log records what ran, not what was claimed.** Each tool execution
+  returns its own log line; the entry is written from that, never from the
+  model's account of itself. The same list is shown under the answer
+  ("GiGi checked the forecast and 9 subject lines").
+- GiGi still **never acts**. It has no tool that sends, replies, pays, books or
+  approves, and it says so when asked to.
+- A tool that cannot answer returns `available: false` with a reason. GiGi says
+  what is missing and the one thing that would fix it — never an empty result
+  relayed as "nothing to report".
+
 ## Prompt 2 — Digest (runs per household per night, 02:00 local)
 
 **Job:** rank the household's open signals and write the morning digest.

@@ -310,10 +310,11 @@ export const BILL_TERMS =
  * first branch, and a search meant to cover one month quietly returns the whole
  * mailbox. Wrapping the terms keeps the bound over all of them.
  */
-export function buildGmailQuery(opts: { terms?: string; days: number }): string {
+export function buildGmailQuery(opts: { terms?: string; days: number; unreadOnly?: boolean }): string {
   const terms = (opts.terms ?? BILL_TERMS).trim() || BILL_TERMS;
   const days = Math.min(Math.max(Math.round(opts.days) || 30, 1), 365);
-  return `(${terms}) newer_than:${days}d -in:spam -in:trash`;
+  const unread = opts.unreadOnly ? ' is:unread' : '';
+  return `(${terms}) newer_than:${days}d${unread} -in:spam -in:trash`;
 }
 
 /** The default search GiGi would use, built through the same guards. */
@@ -332,6 +333,31 @@ export const SCHOOL_TERMS = [
   'OR "parents evening" OR "school trip" OR "permission slip" OR "consent form"',
   'OR "PE kit" OR "inset day" OR "half term" OR homework',
   'OR skola OR förskola OR fritids OR föräldramöte OR skolresa OR utvecklingssamtal',
+].join(' ');
+
+/**
+ * "Is there anything in my inbox that needs me?"
+ *
+ * Wider than BILL_TERMS and narrower than the whole mailbox. The line this
+ * draws matters: GiGi answering "do I have new mail?" must not become GiGi
+ * reading every personal message someone received this week, so the query is
+ * still a list of terms rather than an unbounded `newer_than:7d`. What is here
+ * is the vocabulary of an obligation — something with a deadline, a payment, a
+ * date, a form or a reply attached to it. Personal correspondence has none of
+ * those words in its subject line, which is exactly why it stays out.
+ *
+ * Swedish alongside English, because the second market is Sweden and a
+ * household there gets "förfaller" and "påminnelse", not "due" and "reminder".
+ */
+export const ATTENTION_TERMS = [
+  BILL_TERMS,
+  'OR "action required" OR "action needed" OR reminder OR overdue OR "due date"',
+  'OR deadline OR expires OR expiring OR "final notice" OR "payment failed"',
+  'OR confirm OR confirmation OR booking OR appointment OR "please reply" OR rsvp',
+  'OR delivery OR "your order" OR passport OR visa OR insurance OR "direct debit"',
+  'OR påminnelse OR förfaller OR "sista dag" OR "åtgärd krävs" OR obetald OR försenad',
+  'OR bokning OR bekräftelse OR tidsbokning OR "svara senast" OR autogiro',
+  `OR ${SCHOOL_TERMS}`,
 ].join(' ');
 
 async function listMessageIds(

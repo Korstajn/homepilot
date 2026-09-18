@@ -24,11 +24,13 @@ export function subprocessors(): Subprocessor[] {
     },
     {
       name: 'GiGi AI (Anthropic, EU region)',
-      role: 'Reads a forwarded email into structured fields',
+      role: 'Reads a forwarded email into structured fields, and answers what you ask GiGi',
       region: 'EU',
       data:
         'One email at a time, plus its PDF invoice when you import from Gmail; ' +
-        'raw text is not retained after extraction',
+        'raw text is not retained after extraction. When you ask GiGi a question, the question ' +
+        'itself and the facts needed to answer it — your digest, the forecast, the subject lines ' +
+        'of a search you asked for',
       active: aiEnabled,
       note: aiEnabled ? 'Enabled' : 'Not in use — analysis currently runs on our server with no AI',
     },
@@ -46,12 +48,15 @@ export function subprocessors(): Subprocessor[] {
       // subprocessor that appears only after you have already consented is not
       // disclosure.
       name: 'Gmail (Google)',
-      role: 'Lets GiGi look for bills in your inbox, read-only, if you connect it',
+      role:
+        'Lets GiGi look through your inbox, read-only, if you connect it — for bills, and for ' +
+        'anything that needs you when you ask',
       region: 'Outside the EU (Google)',
       data:
-        'Subject lines when GiGi searches. When you press Import, the emails you import — ' +
-        'body text and PDF invoices — are read and sent for extraction; only the extracted ' +
-        'fields are kept, never the email',
+        'Senders and subject lines when GiGi searches, including when you ask it out loud ' +
+        'whether anything needs you. When you press Import, the emails you import — body text ' +
+        'and PDF invoices — are read and sent for extraction; only the extracted fields are ' +
+        'kept, never the email',
       active: gmailAvailable,
       note: gmailAvailable
         ? 'Optional — forwarding needs no account access at all. Disconnect any time and access is revoked at Google'

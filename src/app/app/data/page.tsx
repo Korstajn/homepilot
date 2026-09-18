@@ -84,6 +84,21 @@ export default function DataTrust() {
         ))}
       </div>
 
+      <div className="divider" />
+      <h2 style={{ fontSize: 18 }}>Take a copy with you</h2>
+      <p className="small muted" style={{ marginTop: 0 }}>
+        Everything above, plus your bills, calendar and digests, as one structured file.
+        Your login details are held in a separate vault and are deliberately not in it.
+      </p>
+      <a
+        className="btn btn-primary"
+        href="/api/account/export"
+        download
+        onClick={() => trackClient('data_export_clicked')}
+      >
+        Download everything
+      </a>
+
       <p className="tiny muted center" style={{ marginTop: 22 }}>
         This is your GDPR record of processing (Art. 15 &amp; 30), in plain words.
       </p>

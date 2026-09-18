@@ -587,3 +587,137 @@ html:has(.landing){scroll-behavior:smooth;scroll-padding-top:80px;}
   .landing .photo-quote{font-size:25px;}
   .landing .things-grid{grid-template-columns:1fr;}
 }
+
+/* =========================================================================
+   PRIVACY — /privacy
+   ---------------------------------------------------------------------------
+   The privacy page used to render in the in-app document shell (globals.css
+   `.docwrap`), which made it the one public page that did not look like the
+   site: cream app cards, the app's serif, no nav, no footer, and a 760px
+   column that stopped dead in the middle of a desktop. Someone arriving from
+   the footer link left GiGi and landed somewhere else.
+
+   So it is built from the same tokens as the landing and the story page, and
+   adds only what a document needs that a marketing page does not: a jump list,
+   a prose measure, a data table, and a rule block for the promises. Everything
+   else reuses .section / .sec-h / .sec-tag / .vert and friends.
+   ========================================================================= */
+
+/* --- Hero ---------------------------------------------------------------- */
+.landing #privacy-hero{padding:150px 80px 70px;position:relative;overflow:hidden;background:var(--bone);}
+.landing .privacy-hero-inner{max-width:1100px;margin:0 auto;position:relative;z-index:1;}
+.landing .privacy-hero h1{font-family:var(--font-serif), serif;font-size:60px;line-height:1.04;letter-spacing:-0.03em;margin-bottom:18px;max-width:14em;}
+.landing .privacy-hero h1 em{font-style:italic;color:var(--sage-m);}
+.landing .privacy-lead{font-size:19px;line-height:1.65;color:var(--ink2);font-weight:300;max-width:620px;}
+.landing .privacy-lead strong{color:var(--ink);font-weight:600;}
+.landing .privacy-meta{margin-top:26px;font-family:var(--font-mono), monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);display:flex;gap:10px;flex-wrap:wrap;}
+.landing .privacy-meta span{background:var(--white);border:1px solid var(--border);border-radius:100px;padding:6px 14px;}
+
+/* --- The four promises, as a rule block ---------------------------------- */
+.landing .pledges{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:44px;background:var(--border);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.landing .pledge{background:var(--white);padding:24px 22px;}
+.landing .pledge-icon{width:26px;height:26px;margin-bottom:14px;}
+.landing .pledge-icon svg{width:100%;height:100%;stroke:var(--sage-m);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+.landing .pledge-title{font-size:14.5px;font-weight:700;color:var(--ink);margin-bottom:5px;}
+.landing .pledge-body{font-size:13px;color:var(--ink3);line-height:1.6;}
+
+/* --- Jump list ------------------------------------------------------------ */
+/* Not sticky, deliberately. `.landing` sets overflow-x:hidden, which makes it a
+   scroll container — and a position:sticky child of a non-scrolling scroll
+   container simply never sticks. Fixing that would mean unpicking the overflow
+   rule the whole marketing site relies on, for a convenience; a jump list at the
+   top of the document is worth far less than that. */
+.landing .privacy-toc{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--white);padding:18px 80px;}
+.landing .privacy-toc-inner{max-width:1100px;margin:0 auto;display:flex;gap:26px;flex-wrap:wrap;align-items:center;}
+.landing .privacy-toc a{font-size:13px;color:var(--ink3);transition:color .15s;white-space:nowrap;}
+.landing .privacy-toc a:hover{color:var(--sage-m);}
+.landing .privacy-toc-label{font-family:var(--font-mono), monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sage-m);}
+
+/* --- Prose ---------------------------------------------------------------- */
+/* A readable measure inside the 1100px section grid. Legal prose set to the
+   full width of a marketing section is a page nobody finishes. */
+.landing .prose{max-width:720px;}
+.landing .prose p{font-size:15.5px;line-height:1.75;color:var(--ink2);margin-bottom:16px;font-weight:300;}
+.landing .prose p:last-child{margin-bottom:0;}
+.landing .prose strong{font-weight:600;color:var(--ink);}
+.landing .prose h3{font-family:var(--font-serif), serif;font-size:26px;letter-spacing:-0.015em;color:var(--ink);margin:36px 0 10px;}
+.landing .prose a{color:var(--sage-m);text-decoration:underline;text-underline-offset:2px;}
+
+/* --- Never / always -------------------------------------------------------- */
+.landing .never-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:40px;}
+.landing .never-col{background:var(--white);border:1px solid var(--border);border-radius:var(--rl);padding:28px;}
+.landing .never-col.dark{background:var(--ink);border-color:var(--ink);}
+.landing .never-h{font-family:var(--font-mono), monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sage-m);margin-bottom:18px;}
+.landing .never-col.dark .never-h{color:rgba(255,255,255,0.42);}
+.landing .never-col ul{list-style:none;}
+.landing .never-col li{font-size:14.5px;line-height:1.6;color:var(--ink2);padding:11px 0 11px 26px;border-bottom:1px solid var(--border);position:relative;}
+.landing .never-col li:last-child{border-bottom:none;padding-bottom:0;}
+.landing .never-col li::before{content:'';position:absolute;left:4px;top:19px;width:9px;height:9px;border-radius:50%;background:var(--sage-m);}
+.landing .never-col.dark li{color:rgba(245,242,236,0.72);border-bottom-color:rgba(255,255,255,0.08);}
+.landing .never-col.dark li::before{background:rgba(255,255,255,0.28);}
+
+/* --- Data table ------------------------------------------------------------ */
+.landing .ptable-wrap{margin-top:40px;border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;background:var(--white);}
+.landing table.ptable{width:100%;border-collapse:collapse;font-size:13.5px;}
+.landing table.ptable th{text-align:left;font-family:var(--font-mono), monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);font-weight:500;padding:14px 18px;background:#EDE9E1;border-bottom:1px solid var(--border2);}
+.landing table.ptable td{padding:16px 18px;border-bottom:1px solid var(--border);color:var(--ink2);line-height:1.55;vertical-align:top;}
+.landing table.ptable tr:last-child td{border-bottom:none;}
+.landing table.ptable td:first-child{color:var(--ink);font-weight:600;white-space:nowrap;}
+/* Below 900px a five-column table is unreadable, so each row becomes its own
+   card with the column names carried down as labels. */
+.landing .ptable-card{display:none;}
+
+/* --- Subprocessors --------------------------------------------------------- */
+.landing .sub-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:40px;}
+.landing .sub{background:var(--bone);border:1px solid var(--border);border-radius:var(--rl);padding:22px 24px;}
+.landing .sub-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:4px;}
+.landing .sub-name{font-size:15px;font-weight:700;color:var(--ink);}
+.landing .sub-flag{font-family:var(--font-mono), monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0;}
+.landing .sub-flag.eu{background:var(--sage-xl);color:var(--sage);}
+.landing .sub-flag.out{background:var(--amb-l);color:var(--amber);}
+.landing .sub-role{font-size:13.5px;color:var(--ink2);line-height:1.55;margin-bottom:10px;}
+.landing .sub-data{font-size:12.5px;color:var(--ink3);line-height:1.6;padding-top:10px;border-top:1px solid var(--border);}
+.landing .sub-note{font-size:12px;color:var(--ink3);margin-top:8px;font-style:italic;}
+.landing .sub.off{opacity:.62;}
+
+/* --- Rights ---------------------------------------------------------------- */
+.landing .rights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px;}
+.landing .right{background:var(--white);border:1px solid var(--border);border-radius:var(--rl);padding:24px;}
+.landing .right-name{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.landing .right-body{font-size:13.5px;color:var(--ink3);line-height:1.6;}
+.landing .right-how{font-family:var(--font-mono), monospace;font-size:11px;color:var(--sage-m);margin-top:12px;letter-spacing:.04em;}
+
+/* --- Callout --------------------------------------------------------------- */
+.landing .callout{background:var(--sage-xl);border:1px solid rgba(27,67,50,0.16);border-radius:var(--rl);padding:26px 28px;margin-top:36px;}
+.landing .callout-title{font-family:var(--font-serif), serif;font-size:23px;color:var(--sage);letter-spacing:-0.01em;margin-bottom:8px;}
+.landing .callout p{font-size:14.5px;color:var(--sage);line-height:1.65;opacity:.88;}
+
+/* --- Contact strip --------------------------------------------------------- */
+.landing #privacy-contact{background:var(--ink);padding:80px;}
+.landing .pc-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+.landing .pc-h{font-family:var(--font-serif), serif;font-size:40px;color:var(--bone);letter-spacing:-0.025em;line-height:1.12;}
+.landing .pc-body{font-size:15px;color:rgba(255,255,255,0.5);line-height:1.7;font-weight:300;}
+.landing .pc-body a{color:var(--bone);text-decoration:underline;text-underline-offset:3px;}
+.landing .pc-rows{display:grid;gap:1px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.08);border-radius:var(--r);overflow:hidden;}
+.landing .pc-row{background:rgba(255,255,255,0.03);padding:16px 20px;display:flex;justify-content:space-between;gap:16px;font-size:13.5px;}
+.landing .pc-row span:first-child{color:rgba(255,255,255,0.4);}
+.landing .pc-row span:last-child{color:var(--bone);text-align:right;}
+
+@media(max-width:900px){
+  .landing #privacy-hero{padding:120px 24px 50px;}
+  .landing .privacy-hero h1{font-size:38px;}
+  .landing .privacy-lead{font-size:16.5px;}
+  .landing .pledges{grid-template-columns:1fr;}
+  .landing .privacy-toc{padding:14px 24px;overflow-x:auto;}
+  .landing .privacy-toc-inner{flex-wrap:nowrap;}
+  .landing .never-grid, .landing .sub-grid, .landing .rights-grid, .landing .pc-inner{grid-template-columns:1fr;}
+  .landing #privacy-contact{padding:60px 24px;}
+  .landing .pc-h{font-size:30px;}
+  /* The table collapses to one card per row; see .ptable-card in the markup. */
+  .landing .ptable-wrap{display:none;}
+  .landing .ptable-card{display:block;background:var(--white);border:1px solid var(--border);border-radius:var(--rl);padding:20px;margin-top:14px;}
+  .landing .ptable-card h4{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:10px;}
+  .landing .ptable-card dl{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;}
+  .landing .ptable-card dt{font-family:var(--font-mono), monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding-top:3px;}
+  .landing .ptable-card dd{font-size:13.5px;color:var(--ink2);line-height:1.5;}
+}

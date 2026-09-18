@@ -238,10 +238,13 @@ export default function GmailConnect({ next }: { next: string }) {
       {status.configured && !status.connected && !status.hostMismatch && (
         <>
           <p className="small" style={{ margin: 0 }}>
-            Instead of forwarding each email, you can let GiGi look for bills itself.
+            Instead of forwarding each email, you can let GiGi look through your inbox itself — for
+            bills, and for anything else that needs you when you ask &ldquo;is there anything in my
+            mail?&rdquo;.
             <strong> Read-only</strong> — GiGi can never send, delete or change anything in your
-            inbox. Searching reads subject lines only. Importing a bill opens that one email and
-            its PDF invoice, and only ever when you press the button yourself.
+            inbox. Searching reads senders and subject lines only, never a message. Importing a bill
+            opens that one email and its PDF invoice, and only ever when you press the button
+            yourself.
           </p>
           <button className="btn btn-primary btn-sm" onClick={connect}>
             Connect Gmail →

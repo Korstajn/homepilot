@@ -14,6 +14,10 @@ export default function CommandBar() {
   const [value, setValue] = useState('');
   const [asked, setAsked] = useState('');
   const [reply, setReply] = useState('');
+  // What GiGi went and looked at to answer — the forecast, N subject lines.
+  // Shown under the answer because a household should never have to wonder
+  // whether asking about their day quietly opened their mailbox.
+  const [checked, setChecked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const recogRef = useRef<any>(null);
@@ -49,7 +53,7 @@ export default function CommandBar() {
     const r = recogRef.current;
     if (!r) return;
     if (listening) { r.stop(); setListening(false); return; }
-    setReply(''); setNotice(''); setValue('');
+    setReply(''); setChecked([]); setNotice(''); setValue('');
     try { r.start(); setListening(true); trackClient('voice_listen'); }
     catch { setNotice('Could not start the microphone — you can type instead.'); }
   }
@@ -57,7 +61,7 @@ export default function CommandBar() {
   async function ask(message: string) {
     const m = message.trim();
     if (!m) return;
-    setAsked(m); setValue(''); setBusy(true); setReply(''); setNotice('');
+    setAsked(m); setValue(''); setBusy(true); setReply(''); setChecked([]); setNotice('');
     const res = await fetch('/api/assistant', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: m }),
@@ -66,6 +70,7 @@ export default function CommandBar() {
     const j = await res.json().catch(() => ({}));
     const text = j.reply ?? 'Sorry, something went wrong.';
     setReply(text);
+    setChecked(Array.isArray(j.checked) ? j.checked : []);
     if (j.error) setNotice(`Details: ${j.error}`);
     speak(text);
   }
@@ -109,8 +114,14 @@ export default function CommandBar() {
         <div className="card pop-in" style={{ marginTop: 8, borderColor: 'var(--brand)' }}>
           {asked && <p className="tiny muted" style={{ margin: 0 }}>“{asked}”</p>}
           <p style={{ margin: '4px 0 0' }}>{busy ? '…' : reply}</p>
+          {checked.length > 0 && !busy && (
+            <p className="tiny muted" style={{ margin: '8px 0 0' }}>
+              GiGi checked {checked.join(' and ')}.{' '}
+              <Link href="/app/data" className="link">See the log</Link>
+            </p>
+          )}
           {reply && !busy && (
-            <button className="link tiny" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 6 }} onClick={() => { setReply(''); setAsked(''); }}>
+            <button className="link tiny" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 6 }} onClick={() => { setReply(''); setAsked(''); setChecked([]); }}>
               Dismiss
             </button>
           )}
