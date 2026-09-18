@@ -45,11 +45,16 @@ this minimises what ever leaves for processing.
   an identifier leak, now fixed).
 - It is **first-party, httpOnly, SameSite=Lax, strictly necessary** — exempt from
   consent under ePrivacy, so there is **no cookie banner** and no tracking cookie.
-- **No third parties**: no analytics SDKs, no Google Fonts, no CDNs, no trackers.
-  A strict **Content-Security-Policy** (`default-src 'self'`, self-only script/
-  style/img/font/connect, `frame-ancestors 'none'`) is set in `next.config.mjs`
-  and enforces it. The only outbound call is the optional Anthropic API, made
-  server-side (never from the browser).
+- **No third parties, with one named exception**: no analytics SDKs, no Google
+  Fonts, no CDNs, no trackers. A strict **Content-Security-Policy** (`default-src
+  'self'`, self-only script/style/img/font, `frame-ancestors 'none'`) is set in
+  `next.config.mjs` and enforces it. `connect-src` allows exactly one outside
+  host, `formspree.io`: joining the waitlist (`WaitlistButton`, `WaitlistForm`)
+  sends the entry to `/api/waitlist` first — that's what's stored and what
+  `/app/metrics` reads — then, separately, to Formspree, purely so Formspree can
+  email the visitor its confirmation (`src/components/landing/formspree.ts`).
+  No other page or flow talks to it. The only *server-side* outbound call
+  remains the optional Anthropic API.
 
 ## Login options (more anonymous, opt-in)
 

@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import { trackClient } from '@/lib/analytics';
+import { notifyFormspree } from './formspree';
 
 /**
  * The FAQ-column waitlist form.
  *
- * The reference page posted to Formspree. Here it posts to our own
- * /api/waitlist instead: same-origin (the CSP in next.config.mjs forbids
- * third-party form-action), and it keeps beta signups inside the store the
- * founder metrics screen reads (/app/metrics).
+ * Posts to our own /api/waitlist first — same-origin, and it keeps beta
+ * signups inside the store the founder metrics screen reads (/app/metrics) —
+ * then fires a second, best-effort request at Formspree so the visitor gets
+ * an autoresponder confirmation. See formspree.ts.
  */
 export default function WaitlistForm({ source }: { source: string }) {
   const [email, setEmail] = useState('');
@@ -34,6 +35,7 @@ export default function WaitlistForm({ source }: { source: string }) {
         return;
       }
       trackClient('waitlist_joined_client', { source });
+      notifyFormspree(email, source);
       setDone(true);
     } catch {
       setError('Something went wrong — please try again or email contact@getgigiapp.com directly.');

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { trackClient } from '@/lib/analytics';
 import ArrowIcon from './ArrowIcon';
+import { notifyFormspree } from './formspree';
 
 /**
  * "Join the waitlist" — a button that becomes the form.
@@ -160,6 +161,7 @@ export default function WaitlistButton({
         return;
       }
       trackClient('waitlist_joined_client', { source });
+      notifyFormspree(value, source);
       setPhase('done');
     } catch {
       setError('Something went wrong. Try again, or email contact@getgigiapp.com.');

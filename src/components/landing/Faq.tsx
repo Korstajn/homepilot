@@ -15,7 +15,7 @@ const ITEMS = [
   },
   {
     q: 'What do you do with my data?',
-    a: 'Stored securely in the UK, used only to run GiGi. Never sold. Delete everything, anytime, by emailing contact@getgigiapp.com.',
+    a: "Stored securely in the UK, used only to run GiGi. Never sold. The one exception is your waitlist email, which also goes to Formspree so it can send your confirmation — nothing else about you is shared. Delete everything, anytime, by emailing contact@getgigiapp.com.",
   },
   {
     q: 'Is GiGi right for me?',
