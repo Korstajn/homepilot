@@ -106,14 +106,6 @@ export interface AssistantToolContext {
   req: NextRequest;
   household: Household;
   member: Member;
-  /**
-   * Whether a real session resolved, as opposed to the demo household GiGi
-   * falls back to for logged-out /app links. The forecast is harmless either
-   * way — it is a postal district. A mailbox is not: the demo household's trust
-   * log is shared, so an inbox search run from it would write one person's
-   * subject-line count into a log other people can read.
-   */
-  signedIn: boolean;
   /** Today in the household's own timezone, 'YYYY-MM-DD'. */
   today: string;
 }
@@ -225,17 +217,6 @@ async function runInbox(
 ): Promise<{ result: unknown; outcome: ToolOutcome }> {
   const days = clampInt(input.days, 1, INBOX_MAX_DAYS, INBOX_DEFAULT_DAYS);
   const unreadOnly = input.unread_only === true;
-
-  if (!ctx.signedIn) {
-    return {
-      result: {
-        available: false,
-        reason:
-          'They are looking at the demo household, not a signed-in account, so there is no inbox of theirs to look at.',
-      },
-      outcome: { kind: 'inbox', logLine: null, label: 'the inbox (not signed in)' },
-    };
-  }
 
   if (!googleConfigured()) {
     return {

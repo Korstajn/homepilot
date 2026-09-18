@@ -16,11 +16,25 @@ export function subprocessors(): Subprocessor[] {
   const gmailAvailable = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
   return [
     {
-      name: 'GiGi server (Render, Frankfurt)',
-      role: 'Stores your data and analyses forwarded email',
+      name: 'GiGi server (Vercel, EU region)',
+      role: 'Runs the app and analyses forwarded email',
       region: 'EU',
-      data: 'Your household profile, bills and digests',
+      data: 'Your household profile, bills and digests, in transit',
       active: true,
+    },
+    {
+      // The database is its own entry rather than folded into "our server":
+      // it is a separate company holding the data at rest, which is exactly
+      // the distinction a subprocessor list exists to make.
+      name: 'Supabase (Postgres, EU region)',
+      role: 'Stores your household data at rest',
+      region: 'EU',
+      data:
+        'Everything GiGi keeps: your household profile, bills, calendar, ' +
+        'children’s first names, digests and your trust log. Never the emails ' +
+        'themselves — only the fields extracted from them',
+      active: true,
+      note: 'Encrypted at rest and in transit. Deleting your account erases these rows',
     },
     {
       name: 'GiGi AI (Anthropic, EU region)',

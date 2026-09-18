@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 const UPDATED = '18 September 2026';
-const VERSION = 'v1.0';
+const VERSION = 'v1.1';
 
 /**
  * /privacy
@@ -530,7 +530,7 @@ export default function Privacy() {
             </div>
             <div className="pc-row">
               <span>Storage</span>
-              <span>EU (Frankfurt)</span>
+              <span>Supabase, EU region</span>
             </div>
             <div className="pc-row">
               <span>AI inference</span>

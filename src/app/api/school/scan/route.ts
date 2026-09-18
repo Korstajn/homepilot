@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createHash } from 'crypto';
-import { currentMember, resolveHousehold, resolveMember, can } from '@/lib/auth';
-import { getHouseholdById, listChildren, logProcessing, track } from '@/lib/store';
+import { can } from '@/lib/auth';
+import { listChildren, logProcessing, track } from '@/lib/store';
 import { buildGmailQuery, fetchMessageContent, searchMessageIds, SCHOOL_TERMS } from '@/lib/google';
 import { gmailAccessToken } from '@/lib/gmail-request';
 import {
@@ -12,6 +12,7 @@ import {
   rememberScan,
   type SchoolScan,
 } from '@/lib/school-ingest';
+import { requireSession } from '@/lib/require-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,8 +36,9 @@ const MAX_MESSAGES = 8;
  * the app, which needs no OAuth, no verification and no waiting.
  */
 export async function POST(req: NextRequest) {
-  const member = currentMember() ?? resolveMember();
-  const household = getHouseholdById(member.householdId) ?? resolveHousehold();
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const { member, household } = auth.session;
   if (!can(member.role, 'manageCalendar')) {
     return NextResponse.json({ error: 'Your account cannot add to the calendar.' }, { status: 403 });
   }
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
     approve?: string[];
   };
 
-  const children = listChildren(household.id);
+  const children = await listChildren(household.id);
 
   // --- Phase two: create what was approved ---------------------------------
   if (body.apply) {
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nothing to add — run a scan first.' }, { status: 409 });
     }
     const approve = Array.isArray(body.approve) ? body.approve.map(String) : null;
-    const { created, skipped } = commitSchoolPlan(household.id, scans, approve);
+    const { created, skipped } = await commitSchoolPlan(household.id, scans, approve);
     return NextResponse.json({
       ok: true,
       created: created.map((e) => ({ id: e.id, summary: e.summary, start: e.start })),
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
       .digest('hex')
       .slice(0, 16);
     scans = [await planSchoolEmail(household, children, email, `paste:${digest}`)];
-    logProcessing(
+    await logProcessing(
       household.id, 'analyzed_on_server', 'school', 'gigi_server',
       'You pasted a school email and GiGi read it — nothing was saved yet',
       'Show you what GiGi would put in your calendar',
@@ -109,7 +111,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Gmail rejected the search.', reason: listed.error }, { status: 502 });
     }
 
-    logProcessing(
+    await logProcessing(
       household.id, 'mailbox_searched', 'school', 'google',
       `GiGi searched the last ${days} days of your inbox for school mail and found ${listed.ids.length}`,
       'Find school email to read',
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest) {
     for (const id of listed.ids) {
       const content = await fetchMessageContent(token.accessToken, id);
       if ('error' in content) continue;
-      logProcessing(
+      await logProcessing(
         household.id, 'mailbox_read', 'school', 'google',
         'GiGi opened one school-looking email to read what it asks you to do',
         'Find dates, forms and payments that need you',
@@ -148,7 +150,7 @@ export async function POST(req: NextRequest) {
   rememberScan(household.id, scans);
 
   const planned = scans.reduce((n, s) => n + s.planned.filter((p) => !p.duplicate).length, 0);
-  track('school_scan_run', household.id, {
+  await track('school_scan_run', household.id, {
     source: body.source ?? 'gmail',
     messages: scans.length,
     planned,

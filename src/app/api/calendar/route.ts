@@ -10,6 +10,7 @@ import {
 } from '@/lib/store';
 import { resolveHousehold, resolveMember, can } from '@/lib/auth';
 import type { CalendarEvent } from '@/lib/types';
+import { requireSession } from '@/lib/require-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,14 +34,14 @@ function origin(req: Request): { https: string; host: string } {
 }
 
 export async function GET(req: Request) {
-  const hh = resolveHousehold();
-  const finance = can(resolveMember().role, 'viewFinances');
-  const events = householdCalendar(hh.id, finance);
-  const token = calendarToken(hh.id);
+  const hh = await resolveHousehold();
+  const finance = can((await resolveMember()).role, 'viewFinances');
+  const events = await householdCalendar(hh.id, finance);
+  const token = await calendarToken(hh.id);
   const { https, host } = origin(req);
   return NextResponse.json({
     events,
-    canManage: can(resolveMember().role, 'manageCalendar'),
+    canManage: can((await resolveMember()).role, 'manageCalendar'),
     subscribe: {
       https: `${https}/api/ics/${token}`,
       webcal: `webcal://${host}/api/ics/${token}`,
@@ -99,8 +100,9 @@ function readEvent(body: Record<string, unknown>, timezone: string):
 
 // Add a manual event. Any member of the household — the calendar is shared.
 export async function POST(req: Request) {
-  const hh = resolveHousehold();
-  const me = resolveMember();
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const { household: hh, member: me } = auth.session;
   if (!can(me.role, 'manageCalendar')) {
     return NextResponse.json({ error: 'Your account cannot add events.' }, { status: 403 });
   }
@@ -114,18 +116,19 @@ export async function POST(req: Request) {
   const parsed = readEvent(body, hh.timezone);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  const created = addCalendarEvent({ householdId: hh.id, ...parsed.value });
+  const created = await addCalendarEvent({ householdId: hh.id, ...parsed.value });
   // A new event is a new signal; the digest should know about it now rather
   // than at 02:00 tomorrow.
-  regenerateDigest(hh.id);
-  track('calendar_event_added', hh.id, { category: created.category, recurring: Boolean(created.rrule) });
+  await regenerateDigest(hh.id);
+  await track('calendar_event_added', hh.id, { category: created.category, recurring: Boolean(created.rrule) });
   return NextResponse.json({ ok: true, event: created });
 }
 
 // Edit an existing manual event.
 export async function PATCH(req: Request) {
-  const hh = resolveHousehold();
-  const me = resolveMember();
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const { household: hh, member: me } = auth.session;
   if (!can(me.role, 'manageCalendar')) {
     return NextResponse.json({ error: 'Your account cannot edit events.' }, { status: 403 });
   }
@@ -136,24 +139,26 @@ export async function PATCH(req: Request) {
   const parsed = readEvent(body, hh.timezone);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
-  const updated = updateCalendarEvent(hh.id, id, parsed.value);
+  const updated = await updateCalendarEvent(hh.id, id, parsed.value);
   if (!updated) {
     // Derived events (a renewal, a passport) are not editable here: they are a
     // view of the bill or the child, and editing them would drift from it.
     return NextResponse.json({ error: 'That event cannot be edited here.' }, { status: 404 });
   }
-  regenerateDigest(hh.id);
-  track('calendar_event_edited', hh.id, { category: updated.category });
+  await regenerateDigest(hh.id);
+  await track('calendar_event_edited', hh.id, { category: updated.category });
   return NextResponse.json({ ok: true, event: updated });
 }
 
 export async function DELETE(req: Request) {
-  const hh = resolveHousehold();
-  if (!can(resolveMember().role, 'manageCalendar')) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const { household: hh, member: me } = auth.session;
+  if (!can(me.role, 'manageCalendar')) {
     return NextResponse.json({ error: 'Your account cannot remove events.' }, { status: 403 });
   }
   const id = new URL(req.url).searchParams.get('id') ?? '';
-  const ok = deleteCalendarEvent(hh.id, id);
-  if (ok) regenerateDigest(hh.id);
+  const ok = await deleteCalendarEvent(hh.id, id);
+  if (ok) await regenerateDigest(hh.id);
   return NextResponse.json({ ok });
 }

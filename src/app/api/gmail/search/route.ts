@@ -26,7 +26,7 @@ const MAX_RESULTS = 50;
  * the mailbox than the user asked for.
  */
 export async function GET(req: NextRequest) {
-  const member = currentMember();
+  const member = await currentMember();
   if (!member) {
     return NextResponse.json({ error: 'Log in to search your inbox.' }, { status: 401 });
   }
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Gmail rejected the search.', reason: result.error }, { status: 502 });
   }
 
-  logProcessing(
+  await logProcessing(
     member.householdId,
     'mailbox_searched',
     'bill',
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     'Consent',
     'Google (not EU-resident)',
   );
-  track('gmail_searched', member.householdId, { days, found: result.messages.length });
+  await track('gmail_searched', member.householdId, { days, found: result.messages.length });
 
   return NextResponse.json({
     ok: true,

@@ -7,9 +7,9 @@ export const dynamic = 'force-dynamic';
 
 // Value tracker — running "GiGi has saved you X and handled Y tasks".
 export async function GET() {
-  if (!can(resolveMember().role, 'viewFinances')) {
+  if (!can((await resolveMember()).role, 'viewFinances')) {
     return NextResponse.json({ error: 'Not visible on this account.' }, { status: 403 });
   }
-  const hh = resolveHousehold();
-  return NextResponse.json(valueSummary(hh.id));
+  const hh = await resolveHousehold();
+  return NextResponse.json(await valueSummary(hh.id));
 }

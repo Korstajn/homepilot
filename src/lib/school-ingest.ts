@@ -145,7 +145,7 @@ export async function planSchoolEmail(
   const child = result.childId ? children.find((c) => c.id === result.childId) ?? null : null;
 
   const existing = new Set(
-    listManualEvents(household.id)
+    (await listManualEvents(household.id))
       .map((e) => e.sourceRef)
       .filter((r): r is string => Boolean(r)),
   );
@@ -190,17 +190,17 @@ export async function planSchoolEmail(
  * Create the events the user approved. Approve-to-execute, applied to
  * extraction itself: GiGi proposes what it read, the household decides.
  */
-export function commitSchoolPlan(
+export async function commitSchoolPlan(
   householdId: string,
   scans: SchoolScan[],
   approvedKeys: string[] | null,
-): { created: CalendarEvent[]; skipped: number } {
+): Promise<{ created: CalendarEvent[]; skipped: number }> {
   const wanted = approvedKeys === null ? null : new Set(approvedKeys);
   const created: CalendarEvent[] = [];
   let skipped = 0;
 
   const existing = new Set(
-    listManualEvents(householdId)
+    (await listManualEvents(householdId))
       .map((e) => e.sourceRef)
       .filter((r): r is string => Boolean(r)),
   );
@@ -209,21 +209,21 @@ export function commitSchoolPlan(
     for (const plan of scan.planned) {
       if (wanted && !wanted.has(plan.key)) { skipped++; continue; }
       if (existing.has(plan.event.sourceRef!)) { skipped++; continue; }
-      created.push(addCalendarEvent(plan.event));
+      created.push(await addCalendarEvent(plan.event));
       existing.add(plan.event.sourceRef!);
     }
   }
 
   if (created.length) {
-    logProcessing(
+    await logProcessing(
       householdId, 'stored', 'school', 'gigi_server',
       `${created.length} school date${created.length === 1 ? '' : 's'} you approved ${created.length === 1 ? 'was' : 'were'} added to your calendar`,
       'Put what the school asked for where you will see it',
       'Consent', 'EU (London)',
     );
     // The digest should know about a form due tomorrow now, not at 02:00.
-    regenerateDigest(householdId);
-    track('school_items_created', householdId, {
+    await regenerateDigest(householdId);
+    await track('school_items_created', householdId, {
       created: created.length,
       types: created.map((e) => e.category).length,
     });

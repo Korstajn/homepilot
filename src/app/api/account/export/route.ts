@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { resolveHousehold, resolveMember } from '@/lib/auth';
+import { requireSession } from '@/lib/require-session';
 import {
   householdCalendar,
   listBills,
@@ -36,8 +36,10 @@ export const dynamic = 'force-dynamic';
  * every other one.
  */
 export async function GET() {
-  const hh = resolveHousehold();
-  const me = resolveMember();
+  // A full copy of a household's data is not something to hand to whoever asks.
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const { household: hh, member: me } = auth.session;
 
   const payload = {
     exportedAt: new Date().toISOString(),
@@ -58,23 +60,23 @@ export async function GET() {
       handedOver: hh.handedOver ?? [],
       createdAt: hh.createdAt,
     },
-    members: listMembers(hh.id).map((m) => ({
+    members: (await listMembers(hh.id)).map((m) => ({
       name: m.name,
       role: m.role,
       status: m.status,
       createdAt: m.createdAt,
     })),
-    children: listChildren(hh.id),
-    bills: listBills(hh.id),
-    calendar: householdCalendar(hh.id),
-    digests: listDigests(hh.id),
+    children: await listChildren(hh.id),
+    bills: await listBills(hh.id),
+    calendar: await householdCalendar(hh.id),
+    digests: await listDigests(hh.id),
     // The trust log ships with its own integrity check, so the copy you hold can
     // be verified as the copy we held.
-    processingLog: listProcessing(hh.id),
-    processingLogIntegrity: verifyProcessingChain(hh.id),
+    processingLog: await listProcessing(hh.id),
+    processingLogIntegrity: await verifyProcessingChain(hh.id),
   };
 
-  logProcessing(
+  await logProcessing(
     hh.id,
     'stored',
     'account',
@@ -83,7 +85,7 @@ export async function GET() {
     'Your right to a portable copy of your data',
     'Legal obligation (data portability)',
   );
-  track('data_exported', hh.id, {});
+  await track('data_exported', hh.id, {});
 
   return new NextResponse(JSON.stringify(payload, null, 2), {
     headers: {

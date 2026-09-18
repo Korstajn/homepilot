@@ -38,11 +38,11 @@ const MAX_MESSAGES = 12;
  * out of a mailbox starts out trusted.
  */
 export async function POST(req: NextRequest) {
-  const member = currentMember();
+  const member = await currentMember();
   if (!member) {
     return NextResponse.json({ error: 'Log in to import from your inbox.' }, { status: 401 });
   }
-  if (member.householdId === getDefaultHousehold().id) {
+  if (member.householdId === (await getDefaultHousehold()).id) {
     return NextResponse.json(
       { error: 'The demo household cannot import a real inbox.' },
       { status: 403 },
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       { status: 403 },
     );
   }
-  const household = getHouseholdById(member.householdId);
+  const household = await getHouseholdById(member.householdId);
   if (!household) {
     return NextResponse.json({ error: 'Household not found.' }, { status: 409 });
   }
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   // Re-importing the same message would silently duplicate a bill the user has
   // already reviewed, so the message id is recorded on the bill and checked here.
   const alreadyImported = new Set(
-    listBills(household.id)
+    (await listBills(household.id))
       .map((b) => b.sourceRef)
       .filter((ref): ref is string => Boolean(ref)),
   );
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  logProcessing(
+  await logProcessing(
     household.id,
     'mailbox_searched',
     'bill',
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     'Consent',
     'Google (not EU-resident)',
   );
-  track('gmail_import_run', household.id, {
+  await track('gmail_import_run', household.id, {
     days,
     found: listed.ids.length,
     imported: imported.length,

@@ -4,6 +4,7 @@ import { getTodayDigest, listBills, valueSummary, logProcessing, track } from '@
 import { currentMember, resolveHousehold, resolveMember, can } from '@/lib/auth';
 import { claudeConverse, aiEnabled, ASSISTANT_MODEL } from '@/lib/anthropic';
 import { ASSISTANT_TOOLS, runAssistantTool, todayIn, type ToolOutcome } from '@/lib/assistant-tools';
+import { requireSession } from '@/lib/require-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,14 +51,16 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const hh = resolveHousehold();
-  const me = resolveMember();
-  const signedIn = currentMember() !== null;
+  // A model call costs money and writes to a trust log, so it needs a real
+  // session rather than the demo fallback every read is allowed.
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const { household: hh, member: me } = auth.session;
   const finance = can(me.role, 'viewFinances');
   const today = todayIn(hh.timezone);
 
   // Build a compact, factual context from the member's own household.
-  const digest = getTodayDigest(hh.id);
+  const digest = await getTodayDigest(hh.id);
   const items = (digest?.items ?? []).filter((i) => finance || i.category !== 'bill');
   const lines: string[] = [];
   lines.push(`The person you're speaking to is ${me.name}.`);
@@ -67,10 +70,10 @@ export async function POST(req: NextRequest) {
   lines.push(`Today is ${today} (${hh.timezone}).`);
   lines.push(items.length ? `Today's digest: ${items.map((i) => `- ${i.line}`).join(' ')}` : 'Today the digest is quiet — nothing needs attention.');
   if (finance) {
-    const bills = listBills(hh.id).filter((b) => b.confirmed);
+    const bills = (await listBills(hh.id)).filter((b) => b.confirmed);
     const soon = bills.filter((b) => b.renewalDate).sort((a, b) => (a.renewalDate! < b.renewalDate! ? -1 : 1)).slice(0, 3);
     if (soon.length) lines.push(`Upcoming renewals: ${soon.map((b) => `${b.provider} on ${b.renewalDate}`).join(', ')}.`);
-    const v = valueSummary(hh.id);
+    const v = await valueSummary(hh.id);
     lines.push(`So far GiGi has saved ${v.savedAnnual} ${v.currency} per year and handled ${v.handled} tasks.`);
   } else {
     lines.push('This person has a limited view: do not discuss bills, money, or approvals.');
@@ -91,7 +94,7 @@ export async function POST(req: NextRequest) {
       tools: ASSISTANT_TOOLS,
       run: async (call) => {
         const { result, outcome } = await runAssistantTool(
-          { req, household: hh, member: me, signedIn, today },
+          { req, household: hh, member: me, today },
           call,
         );
         outcomes.push(outcome);
@@ -114,7 +117,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Transparency: a voice question is content sent to the AI. Record it.
-  logProcessing(
+  await logProcessing(
     hh.id, 'sent_to_ai', 'system', 'gigi_ai',
     'You asked GiGi a question by voice; it was answered by GiGi’s AI',
     'Answer your spoken question',
@@ -127,7 +130,7 @@ export async function POST(req: NextRequest) {
   for (const outcome of outcomes) {
     if (!outcome.logLine) continue;
     const isInbox = outcome.kind === 'inbox';
-    logProcessing(
+    await logProcessing(
       hh.id,
       isInbox ? 'mailbox_searched' : 'weather_checked',
       isInbox ? 'bill' : 'system',
@@ -139,7 +142,7 @@ export async function POST(req: NextRequest) {
     );
   }
   if (outcomes.length) {
-    track('assistant_tools_used', hh.id, { tools: outcomes.map((o) => o.label) });
+    await track('assistant_tools_used', hh.id, { tools: outcomes.map((o) => o.label) });
   }
 
   return NextResponse.json({

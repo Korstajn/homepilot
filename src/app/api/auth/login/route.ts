@@ -11,19 +11,19 @@ export async function POST(req: Request) {
   // Two ways in: email + password, or a one-time recovery code (email-free).
   let subjectId: string | undefined;
   if (recoveryCode) {
-    const identity = findIdentityByRecoveryHash(hashRecovery(recoveryCode));
+    const identity = await findIdentityByRecoveryHash(hashRecovery(recoveryCode));
     if (identity) subjectId = identity.subjectId;
   } else {
-    const identity = findIdentityByEmail(email);
+    const identity = await findIdentityByEmail(email);
     if (identity && verifyPassword(password, identity.passwordHash)) subjectId = identity.subjectId;
   }
 
-  const member = subjectId ? memberForSubject(subjectId) : undefined;
+  const member = subjectId ? await memberForSubject(subjectId) : undefined;
   if (!member) {
     return NextResponse.json({ error: recoveryCode ? 'That recovery code is not valid.' : 'Wrong email or password.' }, { status: 401 });
   }
 
-  track('login', member.householdId, { role: member.role, method: recoveryCode ? 'recovery' : 'password' });
+  await track('login', member.householdId, { role: member.role, method: recoveryCode ? 'recovery' : 'password' });
   const res = NextResponse.json({ ok: true, member: { name: member.name, role: member.role } });
   res.cookies.set(SESSION_COOKIE, newSessionToken(member.id), COOKIE_OPTS);
   return res;

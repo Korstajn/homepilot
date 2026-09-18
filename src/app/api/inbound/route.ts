@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No email content found in payload' }, { status: 400 });
   }
 
-  const household = resolveInboundHousehold(recipient, from);
+  const household = await resolveInboundHousehold(recipient, from);
   const { engine, extracted, bill } = await ingestEmail(household, {
     from,
     subject,

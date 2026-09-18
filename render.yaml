@@ -14,6 +14,8 @@ services:
     region: frankfurt # EU region — keeps "EU data only" true (docs/DECISIONS.md §4)
     buildCommand: npm ci && npm run build
     startCommand: npm start
+    # /api/household touches the database, so a failed health check now means
+    # "this instance cannot reach Postgres" rather than only "the process is up".
     healthCheckPath: /api/household
     autoDeploy: true
     envVars:
@@ -32,11 +34,13 @@ services:
       # Only GIGI_SITE_ENV=production makes a deployment indexable.
       - key: GIGI_SITE_ENV
         value: development
-      # Uncomment and set in the Render dashboard when you graduate off the
-      # in-memory store / add real AI extraction:
+      # REQUIRED. The Supabase connection string; nothing that reads or writes
+      # data works without it. Set it in the Render dashboard (sync:false keeps
+      # it out of the repo). Migrations apply themselves on first request.
+      - key: DATABASE_URL
+        sync: false
+      # Set for real AI extraction; without it the heuristic baseline runs.
       # - key: ANTHROPIC_API_KEY
       #   sync: false
       # - key: ANTHROPIC_REGION
       #   value: eu
-      # - key: DATABASE_URL
-      #   sync: false

@@ -1,6 +1,7 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { scryptSync, randomBytes, timingSafeEqual, createHash } from 'crypto';
-import { getDefaultHousehold, getHouseholdById, getMemberById, ownerMember, memberIdForSession } from './store';
+import { getDefaultHousehold, getHouseholdById, getMemberById, ownerMember } from './store';
 import { signToken, verifyToken } from './secrets';
 import type { Household, Member, MemberRole } from './types';
 
@@ -55,29 +56,35 @@ export function newSessionToken(memberId: string): string {
   return signToken({ m: memberId });
 }
 
-/** Member id from a session cookie: signed token first, legacy in-memory second. */
+/** Member id from a signed session cookie. */
 function memberIdFromToken(token: string): string | null {
   const signed = verifyToken<{ m?: unknown }>(token, COOKIE_OPTS.maxAge * 1000);
-  if (signed && typeof signed.m === 'string') return signed.m;
-  // Tokens minted before sessions were signed, and any still in memory on this
-  // instance. Harmless to keep; it costs one array scan.
-  return memberIdForSession(token) ?? null;
+  return signed && typeof signed.m === 'string' ? signed.m : null;
 }
 
-// The session cookie holds an OPAQUE token (not the member id, no PII). Resolve
-// it server-side to the member (or the demo owner as a fallback so /app demo
-// links keep working without logging in).
-export function currentMember(): Member | null {
+/**
+ * The member this request belongs to, or null.
+ *
+ * The cookie carries an OPAQUE signed token — a member id and an issue time,
+ * no PII — which is verified with the deployment's secret and then resolved to
+ * a row.
+ *
+ * Wrapped in React's `cache` so that one incoming request costs ONE lookup
+ * however many times it asks. A typical route calls `currentMember()` for the
+ * permission check and `resolveHousehold()` for the data, and both used to be
+ * free; against a database they are round trips, and doing the same one four
+ * times per request is exactly the waste that shows up as latency under load.
+ * The cache is scoped to a single request — it is not a cross-request cache and
+ * cannot serve one household's member to another.
+ */
+export const currentMember = cache(async (): Promise<Member | null> => {
   const token = cookies().get(SESSION_COOKIE)?.value;
-  if (token) {
-    const memberId = memberIdFromToken(token);
-    if (memberId) {
-      const m = getMemberById(memberId);
-      if (m && m.status === 'active') return m;
-    }
-  }
-  return null;
-}
+  if (!token) return null;
+  const memberId = memberIdFromToken(token);
+  if (!memberId) return null;
+  const m = await getMemberById(memberId);
+  return m && m.status === 'active' ? m : null;
+});
 
 export type SessionState =
   | 'none' // no cookie: a visitor, or the demo
@@ -85,37 +92,74 @@ export type SessionState =
   | 'stale'; // a cookie WE signed, pointing at a member this instance lacks
 
 /**
- * Tell a genuinely-absent session apart from a lost one.
+ * Tell a genuinely-absent session apart from one that no longer resolves.
  *
- * 'stale' is the in-memory store's failure mode on serverless: the signature is
- * ours, so the person really did log in, but the household only ever existed in
- * another instance's memory. Without this the UI would quietly fall back to the
- * demo household and show them someone else's bills as if they were their own.
- * It disappears once the store is backed by Postgres (db/schema.sql).
+ * 'stale' means a cookie WE signed points at a member that is not there any
+ * more — the account was deleted, or the member was removed from the household.
+ * It matters because the UI must say "log in again" rather than quietly falling
+ * back to the demo household and showing someone else's bills as if they were
+ * theirs.
  */
-export function sessionState(): SessionState {
+export async function sessionState(): Promise<SessionState> {
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return 'none';
-  if (currentMember()) return 'active';
+  if (await currentMember()) return 'active';
   return verifyToken<{ m?: unknown }>(token, COOKIE_OPTS.maxAge * 1000) ? 'stale' : 'none';
 }
 
-export function resolveMember(): Member {
-  const m = currentMember();
+/** The session's member, falling back to the demo household's owner. */
+export const resolveMember = cache(async (): Promise<Member> => {
+  const m = await currentMember();
   if (m) return m;
-  // Fallback: the demo household's owner member.
-  return ownerMember(getDefaultHousehold().id)!;
+  const demo = await getDefaultHousehold();
+  const owner = await ownerMember(demo.id);
+  if (!owner) throw new Error('The demo household has no owner member.');
+  return owner;
+});
+
+/** The household for this request, resolved through its member. */
+export const resolveHousehold = cache(async (): Promise<Household> => {
+  const m = await resolveMember();
+  return (await getHouseholdById(m.householdId)) ?? getDefaultHousehold();
+});
+
+/**
+ * Member and household together, in one place.
+ *
+ * Almost every route needs both, and asking for them separately is two awaits
+ * where one would do. `currentMember` is cached per request, so the member half
+ * is free once either has been asked for.
+ */
+export async function resolveSession(): Promise<{ member: Member; household: Household }> {
+  const member = await resolveMember();
+  const household = (await getHouseholdById(member.householdId)) ?? (await getDefaultHousehold());
+  return { member, household };
 }
 
-// Resolve the household for the current request via the session member.
-export function resolveHousehold(): Household {
-  const m = resolveMember();
-  return getHouseholdById(m.householdId) ?? getDefaultHousehold();
+/**
+ * The session a WRITE requires.
+ *
+ * `resolveMember` falls back to the demo household's owner, which is right for
+ * reading — the marketing site links straight into /app and a visitor should
+ * see a working product. It is wrong for writing, and it became dangerous the
+ * day the store stopped being per-instance memory: with one shared database,
+ * an anonymous caller falling back to the demo owner can add bills to the demo
+ * household, invite members to it, rotate its calendar token, or erase it — and
+ * every other visitor sees the result.
+ *
+ * So writes go through here instead. Null means "no real session", and the
+ * route answers 401 rather than mutating somebody else's data.
+ */
+export async function writeSession(): Promise<{ member: Member; household: Household } | null> {
+  const member = await currentMember();
+  if (!member) return null;
+  const household = await getHouseholdById(member.householdId);
+  return household ? { member, household } : null;
 }
 
 // Is there a real (non-fallback) logged-in session?
-export function currentSessionHouseholdId(): string | null {
-  const m = currentMember();
+export async function currentSessionHouseholdId(): Promise<string | null> {
+  const m = await currentMember();
   return m ? m.householdId : null;
 }
 

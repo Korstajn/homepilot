@@ -25,9 +25,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Gmail rejected the request.', reason: result.error }, { status: 502 });
   }
 
-  const member = currentMember();
+  const member = await currentMember();
   if (member) {
-    logProcessing(
+    await logProcessing(
       member.householdId,
       'mailbox_searched',
       'bill',
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       'Consent',
       'Google (not EU-resident)',
     );
-    track('gmail_probed', member.householdId, { found: result.messages.length });
+    await track('gmail_probed', member.householdId, { found: result.messages.length });
   }
 
   return NextResponse.json({

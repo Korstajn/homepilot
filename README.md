@@ -8,7 +8,7 @@ This repo holds **both** the product spec and the running app.
 | | |
 | --- | --- |
 | **Run it** | `npm install && npm run dev` → http://localhost:3000 |
-| **The app** | Next.js 14, `src/` — seeded in-memory data, no API keys needed to boot. Guided tour: [docs/BETA_BUILD.md](docs/BETA_BUILD.md) |
+| **The app** | Next.js 14, `src/` — Postgres (Supabase) via `DATABASE_URL`; migrations in `db/migrations/` apply themselves. Guided tour: [docs/BETA_BUILD.md](docs/BETA_BUILD.md) |
 | **The landing design** | [docs/reference/landing-reference.html](docs/reference/landing-reference.html) — the approved design, ported 1:1 to `src/app/page.tsx` + `src/app/landing.css` |
 | **Deploying** | dev.getgigiapp.com, optional beta code: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 | **Why it looks like this** | [docs/MIGRATION_ANALYSIS.md](docs/MIGRATION_ANALYSIS.md) |

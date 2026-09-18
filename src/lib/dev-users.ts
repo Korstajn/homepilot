@@ -1,17 +1,14 @@
 /**
  * Deterministic test users, configured entirely from environment variables.
  *
- * The problem this solves: `/api/auth/signup` creates a household in one
- * serverless instance's memory, so the account is gone as soon as a request
- * lands on another instance. Real sign-up needs the Postgres swap
- * (`db/schema.sql`) to work properly.
+ * Real sign-up persists now that there is a database, so these are a
+ * convenience rather than a workaround: a known address and password you can
+ * log in with on any deployment without creating an account first.
  *
- * Test users dodge that entirely by being *derived* rather than stored. Every
- * instance computes the same household id, member id and subject id from the
- * same email, so an account seeded on one instance is byte-identical to the one
- * seeded on the next. Combined with the signed session cookie in
- * `src/lib/secrets.ts`, logging in as a test user works across any number of
- * instances with no database at all.
+ * They are *derived* rather than invented. Every instance computes the same
+ * household id, member id and subject id from the same email, which is what
+ * makes seeding them idempotent — re-running it finds the row already there
+ * instead of creating a second household for the same tester.
  *
  * Configuration:
  *   GIGI_DEV_PASSWORD  the shared password. UNSET ⇒ no test users exist at all.
