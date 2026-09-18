@@ -161,9 +161,11 @@ a regression case.
   `subjectId`; the content store (bills/digests/processing) is keyed by opaque
   ids only, so a content dump isn't linkable to a person. Sessions are opaque
   server-side tokens (the cookie holds no id/PII), first-party and strictly
-  necessary (no cookie banner); a strict CSP + zero third parties enforce no
-  tracking; text is PII-stripped before AI; accounts can be email-free with a
-  one-time recovery code. See `docs/PRIVACY_ARCHITECTURE.md`.
+  necessary (no cookie banner); a strict CSP enforces no tracking, with one
+  named exception — a waitlist email also goes to Formspree, client-side, so it
+  can send the visitor's confirmation; text is PII-stripped before AI; accounts
+  can be email-free with a one-time recovery code. See
+  `docs/PRIVACY_ARCHITECTURE.md`.
 - **Family accounts** (`/app/family`): the household is the shared unit; auth
   moved from household to **member**. Three login roles — owner (manages
   members), adult/co-parent (can approve + manage bills), teen (limited view:
