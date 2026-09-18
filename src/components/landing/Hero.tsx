@@ -1,9 +1,8 @@
 'use client';
 
-import ArrowIcon from './ArrowIcon';
 import PhoneMock from './PhoneMock';
 import Reveal from './Reveal';
-import { scrollToId } from './scroll';
+import WaitlistButton from './WaitlistButton';
 
 const PROOF_AVATARS = [
   { initials: 'SL', color: '#2D6A4F' },
@@ -66,14 +65,10 @@ export default function Hero() {
             chief of staff for household admin, or to anyone else in your household.
           </p>
           <div className="hero-actions">
-            <button
-              className="btn-hero"
-              style={{ padding: '17px 38px', fontSize: 17 }}
-              onClick={() => scrollToId('faq')}
-            >
-              Join the waitlist
-              <ArrowIcon />
-            </button>
+            {/* The same control as the nav, at hero size. Two buttons with the
+                same words doing two different things on one page is the kind of
+                inconsistency nobody can name and everybody feels. */}
+            <WaitlistButton source="hero" variant="hero" align="start" />
           </div>
           <div className="hero-proof">
             <div className="proof-avatars">
