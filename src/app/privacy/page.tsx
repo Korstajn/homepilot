@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 const UPDATED = '18 September 2026';
-const VERSION = 'v1.1';
+const VERSION = 'v1.2';
 
 /**
  * /privacy
@@ -261,6 +261,23 @@ export default function Privacy() {
                 you press Import, and is logged as what it is. We keep those apart in the code
                 precisely so that &ldquo;GiGi only read subject lines&rdquo; stays a fact we can
                 prove rather than a habit we might drift out of.
+              </p>
+
+              <h3>Your calendar is read, never written</h3>
+              <p>
+                If you connect Google, you can bring your own calendars into GiGi so the
+                household&apos;s week is in one place. It goes <strong>one way</strong>: GiGi reads,
+                and has no ability to add, move or delete anything in your calendar — there is no
+                code in the product that could. You pick which calendars, one at a time, and none
+                are read until you do; a Google account carries holidays, birthdays and whatever
+                anyone has ever shared with it, and importing all of that would be the opposite of
+                what GiGi is for. Turn a calendar off and everything imported from it is deleted
+                here, not hidden.
+              </p>
+              <p>
+                Note that mail and calendar are <em>separate</em> permissions. Connecting one does
+                not grant the other, which is why GiGi asks again rather than quietly widening what
+                an existing connection can reach.
               </p>
 
               <h3>The AI is given one email, and asked to point rather than remember</h3>
@@ -585,6 +602,12 @@ const DATA_ROWS = [
     why: 'An encrypted refresh token, held in a cookie in your browser rather than on our server, so GiGi can search headers when you ask.',
     basis: 'Consent — optional, revocable',
     kept: 'Until you disconnect; Google expires it weekly during the beta',
+  },
+  {
+    what: 'Google calendars you tick',
+    why: 'The title, date, time and location of events in a window around today, copied in so your own commitments sit alongside the rest of the household. One way: GiGi reads and never writes.',
+    basis: 'Consent — optional, per calendar, revocable',
+    kept: 'Until you untick the calendar or disconnect, then deleted',
   },
   {
     what: 'Children you add',

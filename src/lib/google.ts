@@ -45,15 +45,52 @@ export const GMAIL_COOKIE_OPTS = {
 export const OAUTH_STATE_COOKIE_OPTS = { ...GMAIL_COOKIE_OPTS, maxAge: 60 * 10 };
 
 /**
+ * What GiGi asks Google for.
+ *
  * `openid email` so we can show WHICH account is connected — that matters for
- * trust, and it costs nothing: both are non-sensitive. gmail.readonly is the
- * one that does the work.
+ * trust, and it costs nothing: both are non-sensitive.
+ *
+ * CALENDAR IS NOT PART OF GMAIL ACCESS. `gmail.readonly` grants a mailbox and
+ * nothing else; reading a Google Calendar needs its own scopes, and an existing
+ * connection granted before these were added does not have them. That is why
+ * `missingScopes` below exists rather than the code assuming a connection can
+ * do everything.
+ *
+ * The two calendar scopes are the granular pair rather than the blanket
+ * `calendar.readonly`: one to list which calendars exist, one to read the events
+ * on them. Neither can write, neither can touch sharing, ACLs or settings. The
+ * blanket scope would also have worked and would have asked for more than the
+ * feature needs, which is the thing this codebase does not do.
  */
+export const CALENDAR_LIST_SCOPE = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly';
+export const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
+
 export const GMAIL_SCOPES = [
   'openid',
   'email',
   'https://www.googleapis.com/auth/gmail.readonly',
+  CALENDAR_LIST_SCOPE,
+  CALENDAR_EVENTS_SCOPE,
 ];
+
+/**
+ * Which of the scopes we asked for a connection does NOT have.
+ *
+ * Google returns the granted scopes as a space-separated string, and a user can
+ * untick individual ones on the consent screen — so "connected" never implies
+ * "connected for everything". Anyone who linked their account before calendar
+ * access existed has a token that works perfectly for mail and cannot read a
+ * single calendar, and the only honest thing to do with that is say so and
+ * offer to reconnect.
+ */
+export function missingScopes(granted: string | undefined, needed: string[]): string[] {
+  const have = new Set((granted ?? '').split(/\s+/).filter(Boolean));
+  return needed.filter((scope) => !have.has(scope));
+}
+
+export function hasCalendarScopes(granted: string | undefined): boolean {
+  return missingScopes(granted, [CALENDAR_LIST_SCOPE, CALENDAR_EVENTS_SCOPE]).length === 0;
+}
 
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';

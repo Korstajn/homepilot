@@ -61,19 +61,21 @@ export function subprocessors(): Subprocessor[] {
       // someone has taken it: the trust screen is about what is possible, and a
       // subprocessor that appears only after you have already consented is not
       // disclosure.
-      name: 'Gmail (Google)',
+      name: 'Google (Gmail + Calendar)',
       role:
-        'Lets GiGi look through your inbox, read-only, if you connect it — for bills, and for ' +
-        'anything that needs you when you ask',
+        'Lets GiGi look through your inbox and read the calendars you choose, read-only, if you ' +
+        'connect it',
       region: 'Outside the EU (Google)',
       data:
-        'Senders and subject lines when GiGi searches, including when you ask it out loud ' +
-        'whether anything needs you. When you press Import, the emails you import — body text ' +
-        'and PDF invoices — are read and sent for extraction; only the extracted fields are ' +
-        'kept, never the email',
+        'Senders and subject lines when GiGi searches your mail, including when you ask it out ' +
+        'loud whether anything needs you. When you press Import, the emails you import — body ' +
+        'text and PDF invoices — are read and sent for extraction; only the extracted fields are ' +
+        'kept, never the email. For calendars you tick: the title, date, time and location of ' +
+        'events in a window around today, copied into GiGi so they can sit alongside the rest of ' +
+        'your week. GiGi can never send, delete or modify anything on either side',
       active: gmailAvailable,
       note: gmailAvailable
-        ? 'Optional — forwarding needs no account access at all. Disconnect any time and access is revoked at Google'
+        ? 'Optional — forwarding needs no account access at all. Mail and calendar are separate permissions, and no calendar is read until you tick it. Disconnect any time and access is revoked at Google'
         : 'Not available on this deployment',
     },
     {

@@ -91,6 +91,50 @@ subprocessor registry. Reset the link any time to revoke.
   summer. The offset is resolved against the zone, twice, so it is right across
   a DST boundary. An event with no end gets an hour rather than zero length.
 
+## Google Calendar → GiGi (P1 — built)
+
+The ICS feed above sends GiGi's events OUT. This brings a household's own
+calendar IN, which is the other half of "everything in one place".
+
+**One direction, always.** Google is the source of truth and GiGi holds a
+read-only reflection. There is no write path in `src/lib/google-calendar.ts` and
+none may be added: a sync that "keeps both sides in step" is a sync that can
+delete somebody's dentist appointment because our copy was stale.
+
+- **Its own permissions.** `gmail.readonly` does not grant calendar access; see
+  `docs/GMAIL_OAUTH.md` for the two scopes and for how an older connection is
+  detected and offered a reconnect.
+- **Nothing until it is ticked.** A Google account carries holidays, birthdays
+  and whatever anyone has ever shared with it. Calendars arrive listed and
+  unselected, and the household says what each one IS — school, travel,
+  appointment, other — because the digest ranks by category and GiGi does not
+  guess that a calendar called "Skola" is the school one.
+- **Window reconcile, not sync tokens** (`src/lib/calendar-sync.ts`). Each run
+  fetches −14/+180 days with `singleEvents=true` (recurrences expanded, because
+  nothing downstream expands an RRULE) and makes the local window match. Drift
+  from a bug or a failed run is repaired by the next sync rather than persisting
+  invisibly. Sync tokens are cheaper and are a state machine that can go quietly
+  wrong; this cannot.
+- **Deletion is scoped to the calendar AND the window.** An event outside it was
+  simply not in this response, and reading that as "Google no longer has this"
+  is how a trip booked for next year vanishes.
+- **What never arrives:** a cancelled occurrence, an invitation this household
+  declined, an event with no start at all. Each would put something on a
+  parent's screen that is not theirs to do.
+- **Imported rows are not editable**, enforced in the store (`source = 'manual'`
+  in the update and delete clauses) as well as the UI. An edit would be
+  overwritten on the next sync; a delete would reappear.
+- **Untick a calendar and its events are deleted**, not hidden. "Stop syncing
+  this" means the contents leave our database.
+- **When it runs:** on opening the calendar screen if the copy is older than 30
+  minutes, and on "Sync now". Not in the background — the refresh token lives in
+  an encrypted cookie in the user's browser, not on our server, so the 02:00
+  digest uses whatever the last visit brought in. Changing that means holding a
+  live credential per household in the database.
+
+`scripts/test-calendar-sync.mjs` drives all of the above against a stub Google
+and a real Postgres (`npm run test:calendar-sync`).
+
 ## Add a single event (P1 — web form, built)
 
 Every event has **"+ Add to calendar"** → `/api/calendar/event?id=…` returns a

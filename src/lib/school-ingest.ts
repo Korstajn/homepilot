@@ -12,7 +12,7 @@
 import type { CalendarEvent, Child, Household } from './types';
 import { extractSchool, looksLikeSchool, referenceDate, type ExtractedSchool, type SchoolEmail, type SchoolItem, type SchoolItemType } from './school';
 import { formatMoney } from './money';
-import { addCalendarEvent, listManualEvents, logProcessing, regenerateDigest, track } from './store';
+import { addCalendarEvent, listStoredEvents, logProcessing, regenerateDigest, track } from './store';
 
 export interface PlannedEvent {
   /** Stable within one scan, so the UI can let the user deselect one. */
@@ -145,7 +145,7 @@ export async function planSchoolEmail(
   const child = result.childId ? children.find((c) => c.id === result.childId) ?? null : null;
 
   const existing = new Set(
-    (await listManualEvents(household.id))
+    (await listStoredEvents(household.id))
       .map((e) => e.sourceRef)
       .filter((r): r is string => Boolean(r)),
   );
@@ -200,7 +200,7 @@ export async function commitSchoolPlan(
   let skipped = 0;
 
   const existing = new Set(
-    (await listManualEvents(householdId))
+    (await listStoredEvents(householdId))
       .map((e) => e.sourceRef)
       .filter((r): r is string => Boolean(r)),
   );

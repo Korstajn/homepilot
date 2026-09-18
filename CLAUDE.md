@@ -136,6 +136,8 @@ src/lib/
   inbox.ts         subject-line triage for the assistant
   assistant-tools.ts   what GiGi may go and look up (Prompt 3)
   calendar.ts / ics.ts   the family calendar and its feed
+  google-calendar.ts     the read-only Google Calendar client (an interface)
+  calendar-sync.ts       window reconcile: Google in, nothing ever out
 db/migrations/     the schema. See db/README.md.
 docs/              longer-form design notes per subsystem
 ```
@@ -176,6 +178,43 @@ household's data while reporting success.
 - A route that takes an id must check the row belongs to the caller's household,
   and answer **404** when it does not (not 403 — "not yours" and "does not
   exist" must be indistinguishable).
+
+---
+
+## Google Calendar sync
+
+One direction, read-only, and it must stay that way. Google is the source of
+truth; GiGi holds a reflection. There is no write path in
+`src/lib/google-calendar.ts` and none may be added — "keeping both sides in
+step" is how a sync deletes somebody's dentist appointment because our copy was
+stale.
+
+- **Gmail access is not calendar access.** `gmail.readonly` grants a mailbox and
+  nothing else. Calendar needs its own scopes, so every connection made before
+  this feature existed works for mail and cannot read a calendar. That state is
+  reported as `calendarAccess: false, needsReconnect: true` and gets its own
+  sentence — telling someone "not connected" would send them looking for a
+  setting that is already on.
+- **Nothing is imported until a calendar is ticked**, and the household says what
+  each one IS (school / travel / appointment / other). The digest ranks by
+  category, so GiGi does not guess that a calendar called "Skola" is the school
+  one.
+- **Window reconcile, not sync tokens.** Every run makes the window match
+  Google, so any drift — a bug, a failed run, a missed page — is repaired on the
+  next sync rather than persisting invisibly. Deletion is scoped to the calendar
+  AND the window: an event outside it was not in this response and must not be
+  read as "Google no longer has this".
+- **Imported rows are not editable**, in the store as well as the UI
+  (`source = 'manual'` in the update and delete clauses). An edit would be
+  overwritten on the next sync and a delete would reappear.
+- **Sync runs when the household is here.** The refresh token lives in an
+  encrypted cookie in their browser, not on our server, so there is no
+  background sync and the 02:00 digest uses whatever the last visit brought in.
+  Changing that means holding a live credential per household in the database —
+  a trade to make deliberately, not by accident.
+
+`scripts/test-calendar-sync.mjs` drives the whole thing against a stub Google
+and a real Postgres. Run it when you touch any of this.
 
 ---
 
@@ -374,6 +413,7 @@ Answer one spoken or typed question, out loud. Unlike the two above, this one ma
 npm run dev      # needs DATABASE_URL
 npm run build
 npx tsc --noEmit
+npm run test:calendar-sync   # needs DATABASE_URL; stub Google, real Postgres
 ```
 
 Local database:

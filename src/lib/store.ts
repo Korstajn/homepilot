@@ -39,6 +39,7 @@ import type {
   DigestItem,
   Feedback,
   FieldEvidence,
+  GoogleCalendar,
   Household,
   Identity,
   Market,
@@ -256,6 +257,7 @@ function toCalendarEvent(r: any): CalendarEvent {
     rrule: opt(r.rrule),
     alarmMinutesBefore: opt(r.alarm_minutes_before),
     source: r.source,
+    externalCalendarId: opt(r.external_calendar_id),
     relatedChildId: opt(r.related_child_id),
     sourceRef: opt(r.source_ref),
     evidence: opt(r.evidence as FieldEvidence),
@@ -789,7 +791,18 @@ export async function removeMember(householdId: string, memberId: string): Promi
 
 // --- Calendar ------------------------------------------------------------------
 
-export async function listManualEvents(householdId: string): Promise<CalendarEvent[]> {
+/**
+ * Every stored event for a household — typed in, or imported from a connected
+ * Google calendar.
+ *
+ * Called `listManualEvents` until Google sync existed, which stopped being true
+ * the moment imported rows landed in the same table. The name mattered: the
+ * digest and the ICS feed both read this, and someone reasoning about "manual
+ * events" would have concluded, wrongly, that imported ones were not in the
+ * digest. Derived events (a bill renewal, a passport expiry) are NOT here —
+ * they are rebuilt from their source on every read (src/lib/calendar.ts).
+ */
+export async function listStoredEvents(householdId: string): Promise<CalendarEvent[]> {
   const sql = await conn();
   const rows = await sql`
     select * from calendar_events where household_id = ${householdId} order by start_at
@@ -853,7 +866,11 @@ export async function updateCalendarEvent(
       alarm_minutes_before = ${patch.alarmMinutesBefore === undefined ? sql`alarm_minutes_before` : patch.alarmMinutesBefore},
       related_child_id     = ${patch.relatedChildId === undefined ? sql`related_child_id` : patch.relatedChildId},
       updated_at           = now()
-    where id = ${eventId} and household_id = ${householdId}
+    -- Only a row somebody typed in. An imported event is a reflection of one in
+    -- Google: editing it here would be overwritten by the next sync, and
+    -- deleting it would have it reappear — both of which read as GiGi losing
+    -- the change rather than refusing it.
+    where id = ${eventId} and household_id = ${householdId} and source = 'manual'
     returning *
   `;
   return row ? toCalendarEvent(row) : undefined;
@@ -865,10 +882,237 @@ export async function deleteCalendarEvent(
 ): Promise<boolean> {
   const sql = await conn();
   const rows = await sql`
-    delete from calendar_events where id = ${eventId} and household_id = ${householdId}
+    delete from calendar_events
+    where id = ${eventId} and household_id = ${householdId} and source = 'manual'
     returning id
   `;
   return rows.length > 0;
+}
+
+// --- Google calendars ----------------------------------------------------------
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function toGoogleCalendar(r: any): GoogleCalendar {
+  return {
+    householdId: r.household_id,
+    calendarId: r.calendar_id,
+    summary: r.summary,
+    timeZone: opt(r.time_zone),
+    isPrimary: r.is_primary,
+    backgroundColor: opt(r.background_color),
+    selected: r.selected,
+    category: r.category,
+    lastSyncedAt: opt(r.last_synced_at ? ts(r.last_synced_at) : undefined),
+    lastError: opt(r.last_error),
+    createdAt: ts(r.created_at),
+  };
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+export async function listGoogleCalendars(householdId: string): Promise<GoogleCalendar[]> {
+  const sql = await conn();
+  const rows = await sql`
+    select * from google_calendars where household_id = ${householdId}
+    order by is_primary desc, summary
+  `;
+  return rows.map(toGoogleCalendar);
+}
+
+/**
+ * Record what the account offers, without changing what the household chose.
+ *
+ * Run after every fetch of the calendar list, so a renamed or recoloured
+ * calendar updates — but `selected` and `category` are deliberately NOT in the
+ * update. They are the household's decisions, and a refresh from Google is not
+ * a reason to revisit them. A calendar that disappears from the account is
+ * removed along with anything imported from it, because there is no longer a
+ * source of truth behind those rows.
+ */
+export async function syncGoogleCalendarList(
+  householdId: string,
+  calendars: Array<{
+    calendarId: string;
+    summary: string;
+    timeZone?: string;
+    isPrimary?: boolean;
+    backgroundColor?: string;
+  }>,
+): Promise<GoogleCalendar[]> {
+  const sql = await conn();
+  const ids = calendars.map((c) => c.calendarId);
+
+  await sql.begin(async (tx) => {
+    for (const c of calendars) {
+      await tx`
+        insert into google_calendars (
+          household_id, calendar_id, summary, time_zone, is_primary, background_color
+        ) values (
+          ${householdId}, ${c.calendarId}, ${c.summary || c.calendarId}, ${c.timeZone ?? null},
+          ${c.isPrimary ?? false}, ${c.backgroundColor ?? null}
+        )
+        on conflict (household_id, calendar_id) do update set
+          summary          = excluded.summary,
+          time_zone        = excluded.time_zone,
+          is_primary       = excluded.is_primary,
+          background_color = excluded.background_color
+      `;
+    }
+    if (ids.length > 0) {
+      await tx`
+        delete from calendar_events
+        where household_id = ${householdId}
+          and external_calendar_id is not null
+          and external_calendar_id <> all(${tx.array(ids)})
+      `;
+      await tx`
+        delete from google_calendars
+        where household_id = ${householdId} and calendar_id <> all(${tx.array(ids)})
+      `;
+    }
+  });
+
+  return listGoogleCalendars(householdId);
+}
+
+/**
+ * Tick or untick a calendar, and say what its events are.
+ *
+ * Unticking deletes what was imported from it in the same transaction. The
+ * alternative — leaving the rows and hiding them — means a household that turns
+ * a calendar off still has its contents in our database, which is not what
+ * "stop syncing this" means to the person pressing it.
+ */
+export async function setGoogleCalendarSelection(
+  householdId: string,
+  calendarId: string,
+  patch: { selected?: boolean; category?: GoogleCalendar['category'] },
+): Promise<GoogleCalendar | undefined> {
+  const sql = await conn();
+  const rows = await sql.begin(async (tx) => {
+    const updated = await tx`
+      update google_calendars set
+        selected = coalesce(${patch.selected ?? null}, selected),
+        category = coalesce(${patch.category ?? null}, category)
+      where household_id = ${householdId} and calendar_id = ${calendarId}
+      returning *
+    `;
+    if (updated.length === 0) return updated;
+    if (patch.selected === false) {
+      await tx`
+        delete from calendar_events
+        where household_id = ${householdId} and external_calendar_id = ${calendarId}
+      `;
+    } else if (patch.category) {
+      // Re-categorising takes effect now rather than at the next sync: the
+      // household changed it because the digest is ranking it wrongly today.
+      await tx`
+        update calendar_events set category = ${patch.category}, updated_at = now()
+        where household_id = ${householdId} and external_calendar_id = ${calendarId}
+      `;
+    }
+    return updated;
+  });
+  return rows.length ? toGoogleCalendar(rows[0]) : undefined;
+}
+
+/**
+ * Replace what one calendar contributed inside one time window.
+ *
+ * The whole reconcile is one transaction, and that is the point: a sync that
+ * deleted the old rows and then failed before writing the new ones would leave
+ * a household staring at an empty week. Either the window matches Google or it
+ * is untouched.
+ *
+ * Deletion is scoped to the window as well as the calendar. Events outside it —
+ * a trip booked for next year, already imported when the window reached it —
+ * are not in this response and must not be read as "Google no longer has this".
+ */
+export async function replaceGoogleEvents(
+  householdId: string,
+  calendarId: string,
+  window: { from: string; to: string },
+  events: Array<Omit<CalendarEvent, 'id' | 'householdId' | 'createdAt' | 'source'>>,
+): Promise<{ imported: number; removed: number }> {
+  const sql = await conn();
+  const keep = events.map((e) => e.sourceRef!).filter(Boolean);
+
+  return sql.begin(async (tx) => {
+    for (const e of events) {
+      await tx`
+        insert into calendar_events (
+          id, household_id, summary, description, location, category, start_at, end_at,
+          all_day, tzid, source, external_calendar_id, source_ref, created_at, updated_at
+        ) values (
+          ${'cal_g_' + randomBytes(9).toString('hex')}, ${householdId}, ${e.summary},
+          ${e.description ?? null}, ${e.location ?? null}, ${e.category}, ${e.start},
+          ${e.end ?? null}, ${e.allDay}, ${e.tzid ?? null}, 'google', ${calendarId},
+          ${e.sourceRef!}, now(), now()
+        )
+        -- The index is PARTIAL (it has a "where source_ref is not null"
+        -- predicate), and Postgres
+        -- will not infer a partial index unless the predicate is repeated here.
+        -- Without it: "there is no unique or exclusion constraint matching the
+        -- ON CONFLICT specification", on every insert.
+        on conflict (household_id, source_ref) where source_ref is not null do update set
+          summary              = excluded.summary,
+          description          = excluded.description,
+          location             = excluded.location,
+          category             = excluded.category,
+          start_at             = excluded.start_at,
+          end_at               = excluded.end_at,
+          all_day              = excluded.all_day,
+          tzid                 = excluded.tzid,
+          external_calendar_id = excluded.external_calendar_id,
+          updated_at           = now()
+      `;
+    }
+
+    const removed = await tx`
+      delete from calendar_events
+      where household_id = ${householdId}
+        and external_calendar_id = ${calendarId}
+        and start_at >= ${window.from}
+        and start_at < ${window.to}
+        and ${keep.length > 0 ? tx`source_ref <> all(${tx.array(keep)})` : tx`true`}
+      returning id
+    `;
+
+    await tx`
+      update google_calendars set last_synced_at = now(), last_error = null
+      where household_id = ${householdId} and calendar_id = ${calendarId}
+    `;
+
+    return { imported: events.length, removed: removed.length };
+  });
+}
+
+/** Record why a calendar could not be read, so the UI can say so. */
+export async function recordGoogleCalendarError(
+  householdId: string,
+  calendarId: string,
+  message: string,
+): Promise<void> {
+  const sql = await conn();
+  await sql`
+    update google_calendars set last_error = ${message.slice(0, 300)}
+    where household_id = ${householdId} and calendar_id = ${calendarId}
+  `;
+}
+
+/** Stop syncing entirely: forget the calendars and everything imported from them. */
+export async function disconnectGoogleCalendars(
+  householdId: string,
+): Promise<{ removed: number }> {
+  const sql = await conn();
+  return sql.begin(async (tx) => {
+    const removed = await tx`
+      delete from calendar_events
+      where household_id = ${householdId} and external_calendar_id is not null
+      returning id
+    `;
+    await tx`delete from google_calendars where household_id = ${householdId}`;
+    return { removed: removed.length };
+  });
 }
 
 export async function getHouseholdByCalendarToken(
