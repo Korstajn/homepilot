@@ -45,15 +45,52 @@ export const GMAIL_COOKIE_OPTS = {
 export const OAUTH_STATE_COOKIE_OPTS = { ...GMAIL_COOKIE_OPTS, maxAge: 60 * 10 };
 
 /**
+ * What GiGi asks Google for.
+ *
  * `openid email` so we can show WHICH account is connected — that matters for
- * trust, and it costs nothing: both are non-sensitive. gmail.readonly is the
- * one that does the work.
+ * trust, and it costs nothing: both are non-sensitive.
+ *
+ * CALENDAR IS NOT PART OF GMAIL ACCESS. `gmail.readonly` grants a mailbox and
+ * nothing else; reading a Google Calendar needs its own scopes, and an existing
+ * connection granted before these were added does not have them. That is why
+ * `missingScopes` below exists rather than the code assuming a connection can
+ * do everything.
+ *
+ * The two calendar scopes are the granular pair rather than the blanket
+ * `calendar.readonly`: one to list which calendars exist, one to read the events
+ * on them. Neither can write, neither can touch sharing, ACLs or settings. The
+ * blanket scope would also have worked and would have asked for more than the
+ * feature needs, which is the thing this codebase does not do.
  */
+export const CALENDAR_LIST_SCOPE = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly';
+export const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
+
 export const GMAIL_SCOPES = [
   'openid',
   'email',
   'https://www.googleapis.com/auth/gmail.readonly',
+  CALENDAR_LIST_SCOPE,
+  CALENDAR_EVENTS_SCOPE,
 ];
+
+/**
+ * Which of the scopes we asked for a connection does NOT have.
+ *
+ * Google returns the granted scopes as a space-separated string, and a user can
+ * untick individual ones on the consent screen — so "connected" never implies
+ * "connected for everything". Anyone who linked their account before calendar
+ * access existed has a token that works perfectly for mail and cannot read a
+ * single calendar, and the only honest thing to do with that is say so and
+ * offer to reconnect.
+ */
+export function missingScopes(granted: string | undefined, needed: string[]): string[] {
+  const have = new Set((granted ?? '').split(/\s+/).filter(Boolean));
+  return needed.filter((scope) => !have.has(scope));
+}
+
+export function hasCalendarScopes(granted: string | undefined): boolean {
+  return missingScopes(granted, [CALENDAR_LIST_SCOPE, CALENDAR_EVENTS_SCOPE]).length === 0;
+}
 
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -310,10 +347,11 @@ export const BILL_TERMS =
  * first branch, and a search meant to cover one month quietly returns the whole
  * mailbox. Wrapping the terms keeps the bound over all of them.
  */
-export function buildGmailQuery(opts: { terms?: string; days: number }): string {
+export function buildGmailQuery(opts: { terms?: string; days: number; unreadOnly?: boolean }): string {
   const terms = (opts.terms ?? BILL_TERMS).trim() || BILL_TERMS;
   const days = Math.min(Math.max(Math.round(opts.days) || 30, 1), 365);
-  return `(${terms}) newer_than:${days}d -in:spam -in:trash`;
+  const unread = opts.unreadOnly ? ' is:unread' : '';
+  return `(${terms}) newer_than:${days}d${unread} -in:spam -in:trash`;
 }
 
 /** The default search GiGi would use, built through the same guards. */
@@ -332,6 +370,31 @@ export const SCHOOL_TERMS = [
   'OR "parents evening" OR "school trip" OR "permission slip" OR "consent form"',
   'OR "PE kit" OR "inset day" OR "half term" OR homework',
   'OR skola OR förskola OR fritids OR föräldramöte OR skolresa OR utvecklingssamtal',
+].join(' ');
+
+/**
+ * "Is there anything in my inbox that needs me?"
+ *
+ * Wider than BILL_TERMS and narrower than the whole mailbox. The line this
+ * draws matters: GiGi answering "do I have new mail?" must not become GiGi
+ * reading every personal message someone received this week, so the query is
+ * still a list of terms rather than an unbounded `newer_than:7d`. What is here
+ * is the vocabulary of an obligation — something with a deadline, a payment, a
+ * date, a form or a reply attached to it. Personal correspondence has none of
+ * those words in its subject line, which is exactly why it stays out.
+ *
+ * Swedish alongside English, because the second market is Sweden and a
+ * household there gets "förfaller" and "påminnelse", not "due" and "reminder".
+ */
+export const ATTENTION_TERMS = [
+  BILL_TERMS,
+  'OR "action required" OR "action needed" OR reminder OR overdue OR "due date"',
+  'OR deadline OR expires OR expiring OR "final notice" OR "payment failed"',
+  'OR confirm OR confirmation OR booking OR appointment OR "please reply" OR rsvp',
+  'OR delivery OR "your order" OR passport OR visa OR insurance OR "direct debit"',
+  'OR påminnelse OR förfaller OR "sista dag" OR "åtgärd krävs" OR obetald OR försenad',
+  'OR bokning OR bekräftelse OR tidsbokning OR "svara senast" OR autogiro',
+  `OR ${SCHOOL_TERMS}`,
 ].join(' ');
 
 async function listMessageIds(

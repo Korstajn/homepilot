@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const name = String(body.name ?? '').trim();
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
-  track(name, resolveHousehold().id, body.props ?? {});
+  await track(name, (await resolveHousehold()).id, body.props ?? {});
   return NextResponse.json({ ok: true });
 }
 
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   const denied = guardInternal(req);
   if (denied) return denied;
 
-  const events = listEvents();
+  const events = await listEvents();
   const counts: Record<string, number> = {};
   for (const e of events) counts[e.name] = (counts[e.name] ?? 0) + 1;
   return NextResponse.json({ total: events.length, counts, events: events.slice(0, 100) });

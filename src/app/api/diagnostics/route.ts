@@ -11,6 +11,7 @@ import {
 import { secretSource } from '@/lib/secrets';
 import { adminToken, guardInternal } from '@/lib/internal';
 import { inviteDiagnostics } from '@/lib/invite';
+import { databaseRegion, databaseUrlSource, dbConfigured, dbHealth } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,12 @@ export async function GET(req: Request) {
   const secret = secretSource();
   const gmail = googleConfigured();
   const testers = devUserSpecs();
+  // The one check worth actually performing rather than inferring: a
+  // connection string that is set but unreachable looks identical to a working
+  // one from the outside, and is the difference between a running app and a
+  // wall of 500s.
+  const database = await dbHealth();
+  const dbRegion = databaseRegion();
 
   // Named problems rather than a table to interpret. Each line is something
   // that is actually wrong, in the order it will bite.
@@ -63,8 +70,26 @@ export async function GET(req: Request) {
     );
   }
 
+  if (!dbConfigured()) {
+    warnings.push(
+      'No database is configured. Set DATABASE_URL (or POSTGRES_URL) to the Supabase connection string and redeploy — every route that touches data will 500 until you do. Use the transaction pooler (port 6543) for serverless, not the direct connection.',
+    );
+  } else if (!database.ok) {
+    warnings.push(
+      `The database is configured (${databaseUrlSource()}) but unreachable: ${database.error}. Nothing that reads or writes data will work until this resolves.`,
+    );
+  } else if (dbRegion && !dbRegion.inEurope) {
+    warnings.push(
+      `The database is in ${dbRegion.region}, which is NOT in the EU — and /privacy tells households their data is stored in the EU. Either move the Supabase project to an EU region, or change that page. This is a promise, not a preference.`,
+    );
+  } else if (!dbRegion) {
+    warnings.push(
+      'The database region could not be read from the connection host, so the "EU storage" claim on /privacy cannot be verified from here. Check the Supabase project region by hand.',
+    );
+  }
+
   if (!devUsersEnabled()) {
-    warnings.push('GIGI_DEV_PASSWORD is unset, so there are no test accounts on this build. Sign-up does not persist on serverless, so without them there is no account here that survives a redeploy.');
+    warnings.push('GIGI_DEV_PASSWORD is unset, so there are no test accounts on this build. Sign-up works and persists now that there is a database; test accounts are a convenience, not a requirement.');
   }
 
   if (gateMode() === 'off' && !isPublicSite()) {
@@ -124,6 +149,17 @@ export async function GET(req: Request) {
       nodeVersion: process.version,
       region: process.env.VERCEL_REGION ?? null,
       siteEnv: process.env.GIGI_SITE_ENV ?? null,
+    },
+    database: {
+      configured: dbConfigured(),
+      // The NAME of the variable, never its value: a connection string carries
+      // the database password.
+      source: databaseUrlSource(),
+      reachable: database.ok,
+      latencyMs: database.latencyMs ?? null,
+      error: database.error ?? null,
+      region: dbRegion?.region ?? null,
+      inEurope: dbRegion?.inEurope ?? null,
     },
     betaGate: {
       codeVisible: gate.codeVisible,

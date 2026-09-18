@@ -9,10 +9,10 @@ export const dynamic = 'force-dynamic';
 // user's own accounts). This is the web-app form of the native device write;
 // see docs/CALENDAR.md for the Expo Calendar (EventKit) implementation.
 export async function GET(req: Request) {
-  const hh = resolveHousehold();
-  const finance = can(resolveMember().role, 'viewFinances');
+  const hh = await resolveHousehold();
+  const finance = can((await resolveMember()).role, 'viewFinances');
   const id = new URL(req.url).searchParams.get('id') ?? '';
-  const ev = householdCalendarEvent(hh.id, id);
+  const ev = await householdCalendarEvent(hh.id, id);
   if (!ev || (!finance && ev.category === 'bill')) {
     return new Response('Not found', { status: 404 });
   }

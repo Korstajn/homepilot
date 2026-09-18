@@ -2,16 +2,18 @@
   "name": "gigi-beta",
   "version": "0.1.0",
   "private": true,
-  "description": "GiGi — proactive chief of staff for the household. Beta test build.",
+  "description": "GiGi \u2014 proactive chief of staff for the household. Beta test build.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start -p ${PORT:-3000}",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:calendar-sync": "node scripts/test-calendar-sync.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
     "next": "14.2.15",
+    "postgres": "^3.4.9",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "sharp": "^0.35.4"

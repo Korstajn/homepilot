@@ -16,19 +16,35 @@ export function subprocessors(): Subprocessor[] {
   const gmailAvailable = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
   return [
     {
-      name: 'GiGi server (Render, Frankfurt)',
-      role: 'Stores your data and analyses forwarded email',
+      name: 'GiGi server (Vercel, EU region)',
+      role: 'Runs the app and analyses forwarded email',
       region: 'EU',
-      data: 'Your household profile, bills and digests',
+      data: 'Your household profile, bills and digests, in transit',
       active: true,
     },
     {
+      // The database is its own entry rather than folded into "our server":
+      // it is a separate company holding the data at rest, which is exactly
+      // the distinction a subprocessor list exists to make.
+      name: 'Supabase (Postgres, EU region)',
+      role: 'Stores your household data at rest',
+      region: 'EU',
+      data:
+        'Everything GiGi keeps: your household profile, bills, calendar, ' +
+        'children’s first names, digests and your trust log. Never the emails ' +
+        'themselves — only the fields extracted from them',
+      active: true,
+      note: 'Encrypted at rest and in transit. Deleting your account erases these rows',
+    },
+    {
       name: 'GiGi AI (Anthropic, EU region)',
-      role: 'Reads a forwarded email into structured fields',
+      role: 'Reads a forwarded email into structured fields, and answers what you ask GiGi',
       region: 'EU',
       data:
         'One email at a time, plus its PDF invoice when you import from Gmail; ' +
-        'raw text is not retained after extraction',
+        'raw text is not retained after extraction. When you ask GiGi a question, the question ' +
+        'itself and the facts needed to answer it — your digest, the forecast, the subject lines ' +
+        'of a search you asked for',
       active: aiEnabled,
       note: aiEnabled ? 'Enabled' : 'Not in use — analysis currently runs on our server with no AI',
     },
@@ -45,16 +61,21 @@ export function subprocessors(): Subprocessor[] {
       // someone has taken it: the trust screen is about what is possible, and a
       // subprocessor that appears only after you have already consented is not
       // disclosure.
-      name: 'Gmail (Google)',
-      role: 'Lets GiGi look for bills in your inbox, read-only, if you connect it',
+      name: 'Google (Gmail + Calendar)',
+      role:
+        'Lets GiGi look through your inbox and read the calendars you choose, read-only, if you ' +
+        'connect it',
       region: 'Outside the EU (Google)',
       data:
-        'Subject lines when GiGi searches. When you press Import, the emails you import — ' +
-        'body text and PDF invoices — are read and sent for extraction; only the extracted ' +
-        'fields are kept, never the email',
+        'Senders and subject lines when GiGi searches your mail, including when you ask it out ' +
+        'loud whether anything needs you. When you press Import, the emails you import — body ' +
+        'text and PDF invoices — are read and sent for extraction; only the extracted fields are ' +
+        'kept, never the email. For calendars you tick: the title, date, time and location of ' +
+        'events in a window around today, copied into GiGi so they can sit alongside the rest of ' +
+        'your week. GiGi can never send, delete or modify anything on either side',
       active: gmailAvailable,
       note: gmailAvailable
-        ? 'Optional — forwarding needs no account access at all. Disconnect any time and access is revoked at Google'
+        ? 'Optional — forwarding needs no account access at all. Mail and calendar are separate permissions, and no calendar is read until you tick it. Disconnect any time and access is revoked at Google'
         : 'Not available on this deployment',
     },
     {

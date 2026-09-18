@@ -52,6 +52,21 @@ every push and none of them are registered with Google. Set it explicitly.
 | --- | --- | --- |
 | `openid`, `email` | non-sensitive | So the app can show *which* account is connected. |
 | `gmail.readonly` | **restricted** | Read bill emails. Read-only: GiGi cannot send, delete or modify anything. |
+| `calendar.calendarlist.readonly` | sensitive | List which calendars the account has, so the household can pick. Names only — no events. |
+| `calendar.events.readonly` | sensitive | Read events on the calendars they ticked. Read-only: GiGi cannot add, move or delete anything. |
+
+The two calendar scopes are the **granular pair**, not the blanket
+`calendar.readonly`. They cannot touch sharing, ACLs or settings, and neither
+can write. The blanket scope would also have worked and would have asked for
+more than the feature needs.
+
+**Mail access is not calendar access, and the reverse.** A connection made
+before the calendar scopes were added works perfectly for Gmail and cannot read
+a single calendar. `missingScopes()` in `src/lib/google.ts` is what detects that;
+`/api/calendar/google` reports it as `needsReconnect` so the UI can say
+"reconnect to add calendar access" rather than the untrue "not connected".
+Google also lets a user untick individual scopes on the consent screen, so
+"connected" never implies "connected for everything".
 
 ## Testing mode vs. publishing — read this before planning around it
 

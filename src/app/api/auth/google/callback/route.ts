@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   const client = googleClient();
   if (!client) return back('unconfigured');
 
-  const member = currentMember();
+  const member = await currentMember();
   if (!member) return back('session');
 
   const token = await exchangeCode(client, code, redirectUri(req));
@@ -72,8 +72,8 @@ export async function GET(req: NextRequest) {
     GMAIL_COOKIE_OPTS,
   );
 
-  updateHousehold(member.householdId, { connectionStatus: 'active' });
-  logProcessing(
+  await updateHousehold(member.householdId, { connectionStatus: 'active' });
+  await logProcessing(
     member.householdId,
     'inbox_connected',
     'account',
@@ -85,6 +85,6 @@ export async function GET(req: NextRequest) {
     'Consent',
     'Google (not EU-resident)',
   );
-  track('gmail_connected', member.householdId, {});
+  await track('gmail_connected', member.householdId, {});
   return res;
 }

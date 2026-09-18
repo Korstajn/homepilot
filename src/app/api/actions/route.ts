@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { getTodayDigest, logAction, track, logProcessing } from '@/lib/store';
 import { resolveHousehold, resolveMember, can } from '@/lib/auth';
 import type { DigestItem } from '@/lib/types';
+import { requireSession } from '@/lib/require-session';
 
 // The approve-to-execute loop. Every external action is gated by this explicit
 // call and written to the action log (what, when, outcome).
 export async function POST(req: Request) {
-  const hh = resolveHousehold();
-  const me = resolveMember();
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  const { household: hh, member: me } = auth.session;
   const body = await req.json().catch(() => ({}));
   const itemId = String(body.itemId ?? '');
   const action = body.action as 'approve' | 'done' | 'dismiss';
@@ -20,7 +22,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Only a parent can approve actions.' }, { status: 403 });
   }
 
-  const digest = getTodayDigest(hh.id);
+  const digest = await getTodayDigest(hh.id);
   const item: DigestItem | undefined = digest
     ? [...digest.items, ...digest.overflow].find((i) => i.id === itemId)
     : undefined;
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
     outcome = 'Dismissed';
   }
 
-  logAction({
+  await logAction({
     householdId: hh.id,
     itemId,
     action,
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
     savingAnnual: action === 'approve' ? item.savingAnnual : undefined,
   });
 
-  track('action_' + action, hh.id, {
+  await track('action_' + action, hh.id, {
     category: item.category,
     executable: item.executable,
     savingAnnual: item.savingAnnual ?? null,
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
   // Approving an executable action is the one moment data is shared outward —
   // record it plainly in the trust log.
   if (action === 'approve' && item.executable) {
-    logProcessing(
+    await logProcessing(
       hh.id, 'shared_for_execution', 'bill', 'concierge',
       'You approved a switch — your name and address were shared to carry it out',
       'Execute the switch you approved',

@@ -35,13 +35,13 @@ export async function GET(req: Request) {
   // Connecting a mailbox is a per-person credential grant, so it needs a real
   // session — and it must never land on the demo household, which every
   // visitor to this build shares.
-  const member = currentMember();
+  const member = await currentMember();
   if (!member) {
     const login = new URL('/login', req.url);
     login.searchParams.set('next', next);
     return NextResponse.redirect(login);
   }
-  if (member.householdId === getDefaultHousehold().id) return back('demo');
+  if (member.householdId === (await getDefaultHousehold()).id) return back('demo');
 
   // Stop here rather than bouncing the user off Google's error page: a pinned
   // redirect URI on another host cannot succeed, and Google's 400 never comes
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
   if (redirectHostMismatch(req)) return back('host_mismatch');
 
   const state = nonce();
-  track('gmail_connect_started', member.householdId, {});
+  await track('gmail_connect_started', member.householdId, {});
 
   const res = NextResponse.redirect(
     authUrl({ client, redirectUri: redirectUri(req), state }),

@@ -7,20 +7,20 @@ import type { Digest } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-  const hh = resolveHousehold();
-  const me = resolveMember();
+  const hh = await resolveHousehold();
+  const me = await resolveMember();
   // Warm the forecast cache before building. `buildDigest` is synchronous by
   // design, so this is the one place that goes to the network — and it resolves
   // to null quickly and quietly if the lookup fails, which simply means no
   // weather item today rather than a slow or broken digest.
   await getForecast(hh);
-  let digest = getTodayDigest(hh.id);
-  if (!digest) digest = regenerateDigest(hh.id);
+  let digest = await getTodayDigest(hh.id);
+  if (!digest) digest = await regenerateDigest(hh.id);
 
   const url = new URL(req.url);
   if (url.searchParams.get('open') === '1' && digest && !digest.openedAt) {
-    markDigestOpened(hh.id);
-    track('digest_opened', hh.id, { date: digest.date });
+    await markDigestOpened(hh.id);
+    await track('digest_opened', hh.id, { date: digest.date });
   }
 
   // Teens get a limited view — no financial (bill) items.

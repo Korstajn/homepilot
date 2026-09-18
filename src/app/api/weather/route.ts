@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
  * a stale or invented day.
  */
 export async function GET() {
-  const hh = resolveHousehold();
+  const hh = await resolveHousehold();
   const outlook = await getForecast(hh);
 
   if (!outlook) {
@@ -34,7 +34,7 @@ export async function GET() {
   // Logged as its own outbound hop. What left the server was a coordinate pair
   // for a postal district — recorded here in the same plain language as every
   // other entry, so the user can see the lookup happened and what it involved.
-  logProcessing(
+  await logProcessing(
     hh.id,
     'weather_checked',
     'system',

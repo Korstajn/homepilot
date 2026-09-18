@@ -23,14 +23,14 @@ export async function ingestEmail(
   const hid = household.id;
 
   if (source === 'gmail') {
-    logProcessing(
+    await logProcessing(
       hid, 'mailbox_read', 'bill', 'google',
       `GiGi opened one bill-looking email in your inbox${email.attachments?.length ? ' and its PDF attachment' : ''} to read its details`,
       'Extract the provider, price and renewal date',
       'Consent', 'Google (not EU-resident)',
     );
   } else {
-    logProcessing(
+    await logProcessing(
       hid, 'email_received', 'bill', 'email_service',
       'An email you forwarded arrived at GiGi',
       'You asked GiGi to watch this sender',
@@ -46,7 +46,7 @@ export async function ingestEmail(
   // read — no model, no heuristic. Worth its own line: it is the one path where
   // GiGi is copying a stated fact rather than interpreting anything.
   if (result.evidence.amount?.source === 'json-ld' || result.evidence.renewalDate?.source === 'json-ld') {
-    logProcessing(
+    await logProcessing(
       hid, 'analyzed_on_server', 'bill', 'gigi_server',
       'The sender had published the billing details in a machine-readable form — GiGi read those directly',
       'Take the amount and dates from the sender rather than interpreting the email',
@@ -56,20 +56,20 @@ export async function ingestEmail(
 
   // Record the analysis hop truthfully: AI (leaves for EU inference) vs. on-server.
   if (engine === 'anthropic' || engine === 'anthropic-failed') {
-    logProcessing(
+    await logProcessing(
       hid, 'sent_to_ai', 'bill', 'gigi_ai',
       'The email was sent to GiGi’s AI to be read',
       'Extract the provider, price and renewal date',
       'Consent', 'EU (inference region)', took,
     );
-    logProcessing(
+    await logProcessing(
       hid, 'ai_returned', 'bill', 'gigi_ai',
       'Structured fields came back; the raw email was not retained',
       'Only the extracted fields are kept',
       'Consent', 'EU (inference region)',
     );
   } else {
-    logProcessing(
+    await logProcessing(
       hid, 'analyzed_on_server', 'bill', 'gigi_server',
       'GiGi read the email on our server — no AI, nothing left the server',
       'Extract the provider, price and renewal date',
@@ -77,7 +77,7 @@ export async function ingestEmail(
     );
   }
 
-  const bill = addBill({
+  const bill = await addBill({
     householdId: hid,
     provider: result.provider ?? 'Unknown sender',
     type: result.type ?? 'other',
@@ -94,15 +94,15 @@ export async function ingestEmail(
     confirmed: false, // user confirms before monitoring — matches "null over guessing"
   });
 
-  logProcessing(
+  await logProcessing(
     hid, 'stored', 'bill', 'gigi_server',
     `A ${bill.type} bill${result.provider ? ` from ${result.provider}` : ''} was saved to your register`,
     'Track your renewal',
     'Consent', 'EU (London)',
   );
 
-  regenerateDigest(hid);
-  track(source === 'gmail' ? 'gmail_bill_imported' : 'email_forwarded', hid, {
+  await regenerateDigest(hid);
+  await track(source === 'gmail' ? 'gmail_bill_imported' : 'email_forwarded', hid, {
     engine,
     type: bill.type,
     hasAmount: result.amount !== null,

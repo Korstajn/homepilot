@@ -9,12 +9,12 @@ export const dynamic = 'force-dynamic';
 // Outlook) can subscribe. Revoke by rotating the token.
 export async function GET(req: Request, { params }: { params: { token: string } }) {
   const token = params.token.replace(/\.ics$/, '');
-  const hh = getHouseholdByCalendarToken(token);
+  const hh = await getHouseholdByCalendarToken(token);
   if (!hh) {
     return new Response('Not found', { status: 404 });
   }
   // Full calendar including finance — the token holder is the household.
-  const ics = toICS(householdCalendar(hh.id, true), `${hh.ownerName ? hh.ownerName + '’s ' : ''}GiGi`);
+  const ics = toICS(await householdCalendar(hh.id, true), `${hh.ownerName ? hh.ownerName + '’s ' : ''}GiGi`);
 
   // Calendar clients poll this URL on their own schedule, forever. With stable
   // DTSTAMPs the body is byte-identical between polls when nothing changed, so

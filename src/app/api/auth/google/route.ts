@@ -42,9 +42,9 @@ export async function DELETE(req: NextRequest) {
   const res = NextResponse.json({ ok: true, connected: false });
   res.cookies.set(GMAIL_COOKIE, '', { path: '/', maxAge: 0 });
 
-  const member = currentMember();
+  const member = await currentMember();
   if (conn && member) {
-    logProcessing(
+    await logProcessing(
       member.householdId,
       'inbox_disconnected',
       'account',
@@ -54,7 +54,7 @@ export async function DELETE(req: NextRequest) {
       'Consent withdrawn',
       'Google (not EU-resident)',
     );
-    track('gmail_disconnected', member.householdId, {});
+    await track('gmail_disconnected', member.householdId, {});
   }
   return res;
 }

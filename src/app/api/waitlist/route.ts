@@ -10,7 +10,7 @@ export async function GET(req: Request) {
   const denied = guardInternal(req);
   if (denied) return denied;
 
-  const entries = listWaitlist();
+  const entries = await listWaitlist();
   const household = entries.filter((e) => e.segment === 'household').length;
   const company = entries.filter((e) => e.segment === 'company').length;
   return NextResponse.json({ total: entries.length, household, company, entries: entries.slice(0, 50) });
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Enter a valid email.' }, { status: 400 });
   }
 
-  const entry = addWaitlist(email, segment, source);
-  track('waitlist_joined', null, { segment, source });
+  const entry = await addWaitlist(email, segment, source);
+  await track('waitlist_joined', null, { segment, source });
   return NextResponse.json({ ok: true, id: entry.id, segment });
 }

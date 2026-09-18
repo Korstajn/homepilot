@@ -23,13 +23,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'That message is too long — 4000 characters max.' }, { status: 400 });
   }
 
-  addContactMessage({ name, email, message });
+  await addContactMessage({ name, email, message });
   // Count the event, but never log the message body itself.
-  track('contact_message', null, { length: message.length });
+  await track('contact_message', null, { length: message.length });
   return NextResponse.json({ ok: true });
 }
 
 /** Count only — the messages themselves are personal data, not a public list. */
 export async function GET() {
-  return NextResponse.json({ total: listContactMessages().length });
+  return NextResponse.json({ total: (await listContactMessages()).length });
 }

@@ -2,15 +2,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import ArrowIcon from './ArrowIcon';
-import { onAnchorClick, scrollToId } from './scroll';
+import WaitlistButton from './WaitlistButton';
+import { onAnchorClick } from './scroll';
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
   // #what and #faq live on the homepage. From another page (e.g. /story) a
   // click needs to navigate there first; on the homepage itself it's a plain
   // in-page scroll, same as the reference's IntersectionObserver-free anchors.
@@ -22,14 +21,6 @@ export default function LandingNav() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  function goToSection(id: string) {
-    if (onHome) {
-      scrollToId(id);
-    } else {
-      router.push(`/#${id}`);
-    }
-  }
 
   return (
     <nav id="nav" className={scrolled ? 'scrolled' : undefined}>
@@ -58,10 +49,10 @@ export default function LandingNav() {
         <a href="/login" className="nav-login">
           Log in
         </a>
-        <button className="btn-primary" onClick={() => goToSection('faq')}>
-          Join the waitlist
-          <ArrowIcon size={13} />
-        </button>
+        {/* Was a scroll to an anchor further down the homepage. Someone who
+            presses this has already decided, and the reply to a decision should
+            not be a journey — so the button becomes the form in place. */}
+        <WaitlistButton source="nav" />
       </div>
     </nav>
   );

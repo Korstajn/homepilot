@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { trackClient } from '@/lib/analytics';
 import CommandBar from '@/components/CommandBar';
 import ScreenHeader from '@/components/ScreenHeader';
 import { SkeletonScreen } from '@/components/Skeleton';
 import WeekStrip, { colourFor } from '@/components/WeekStrip';
 import EventForm from '@/components/EventForm';
+import GoogleCalendarSync from '@/components/GoogleCalendarSync';
 import { describeRrule } from '@/lib/calendar';
 import type { CalendarEvent, Child } from '@/lib/types';
 
@@ -19,7 +20,7 @@ export default function Calendar() {
   const [canManage, setCanManage] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     const [j, kids] = await Promise.all([
       fetch('/api/calendar').then((r) => r.json()),
       fetch('/api/children').then((r) => r.json()).catch(() => ({ children: [] })),
@@ -29,8 +30,8 @@ export default function Calendar() {
     setSub(j.subscribe ?? null);
     setCanManage(Boolean(j.canManage));
     setChildren(kids.children ?? []);
-  }
-  useEffect(() => { load(); trackClient('calendar_viewed'); }, []);
+  }, []);
+  useEffect(() => { load(); trackClient('calendar_viewed'); }, [load]);
 
   function showToast(m: string) { setToast(m); setTimeout(() => setToast(''), 2600); }
 
@@ -97,7 +98,14 @@ export default function Calendar() {
                   <span aria-hidden style={{ width: 4, flex: 'none', background: colourFor(e, children) }} />
                   <div style={{ flex: 1, padding: 16 }}>
                     <div className="row between">
-                      <span className="tiny muted">{e.allDay ? 'All day' : timeOf(e.start)}</span>
+                      <span className="tiny muted">
+                        {e.allDay ? 'All day' : timeOf(e.start)}
+                        {/* Say where it came from. An imported event cannot be
+                            edited here, and a card that looks identical to a
+                            typed-in one makes the missing Edit button read as a
+                            bug rather than as the rule it is. */}
+                        {e.source === 'google' && ' · from Google'}
+                      </span>
                       <span className="badge-cat">{e.category}</span>
                     </div>
                     <h3 style={{ margin: '2px 0 2px' }}>{e.summary}</h3>
@@ -124,7 +132,11 @@ export default function Calendar() {
         </div>
       ))}
 
-      {/* Sync sits below the week itself: it is setup, not the daily job. */}
+      {/* Sync sits below the week itself: it is setup, not the daily job.
+          Two directions, in this order: what comes IN from Google, then what
+          goes OUT to a phone. */}
+      {canManage && <GoogleCalendarSync onChanged={load} />}
+
       {sub && (
         <div className="card stack" style={{ marginTop: 20, borderColor: 'var(--brand)' }}>
           <div className="row between">

@@ -32,6 +32,18 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // The migration runner reads db/migrations/*.sql at runtime (src/lib/db.ts).
+  // Next's file tracer only ships files it can see being read, and that
+  // directory is assembled at runtime rather than imported, so it has to be
+  // declared. Without this the first request on a fresh deploy fails with
+  // ENOENT instead of migrating — which is exactly the kind of thing that only
+  // shows up in production.
+  // (Next 14 keeps this under `experimental`; it graduates in 15.)
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/**/*': ['./db/migrations/**/*'],
+    },
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

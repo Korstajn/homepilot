@@ -2,7 +2,7 @@ import Reveal from '../landing/Reveal';
 
 export default function Hook() {
   return (
-    <section className="chapter chapter-light" style={{ paddingTop: 170 }}>
+    <section className="chapter chapter-light chapter-hook">
       <div className="ch-dots" />
       <Reveal visible className="chapter-inner" style={{ position: 'relative', zIndex: 1 }}>
         <div className="ch-eyebrow">Why I built this</div>

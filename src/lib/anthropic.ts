@@ -152,3 +152,140 @@ export async function claudeToolCall<T>(opts: {
     }
   }
 }
+
+/**
+ * A short conversation in which the model may call tools before it answers.
+ *
+ * This is what lets GiGi say "it'll be 6°C at eight, send a coat" instead of "I
+ * don't have access to the weather". The alternative — stuffing every fact GiGi
+ * could conceivably need into one system prompt — means fetching a forecast and
+ * reading an inbox on every "good morning", which is both slow and, in the
+ * inbox's case, a read of somebody's mail they did not ask for. A tool call is
+ * the honest shape: nothing is fetched until the question needs it.
+ *
+ * Two properties the caller can rely on:
+ *
+ *   - `run` is the ONLY thing that touches the outside world. The model chooses
+ *     a tool and arguments; it never gets a URL, a token, or a household id.
+ *     Every guard (is an inbox connected, may this member see finances, how far
+ *     back may a search reach) lives in the executor, where it can be enforced.
+ *   - `used` reports which tools actually ran, so the caller can log a real
+ *     processing entry per read and the UI can tell the user what was looked at.
+ *     A trust log built from what the model SAID it did would be worthless.
+ *
+ * Bounded by `maxRounds`: a model that keeps calling tools instead of answering
+ * stops and the caller gets whatever text it produced.
+ */
+export interface ClaudeTool {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
+export interface ToolRun {
+  name: string;
+  input: Record<string, unknown>;
+}
+
+export async function claudeConverse(opts: {
+  system: string;
+  user: string;
+  model: string;
+  maxTokens?: number;
+  tools: ClaudeTool[];
+  /** Executes one tool call. Returning a plain object is enough; it is JSON-encoded. */
+  run: (call: ToolRun) => Promise<unknown>;
+  maxRounds?: number;
+}): Promise<{ text: string; used: ToolRun[]; region: string }> {
+  const Anthropic = (await import('@anthropic-ai/sdk')).default;
+  const client = new Anthropic();
+  const region = process.env.ANTHROPIC_REGION || 'eu';
+  const maxRounds = opts.maxRounds ?? 3;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const messages: any[] = [{ role: 'user', content: opts.user }];
+  const used: ToolRun[] = [];
+
+  // Whether this account accepts the EU geo pin is decided once, on the first
+  // call, and then held for the rest of the exchange — re-probing it on every
+  // round would double the request count for no new information.
+  let withGeo = true;
+  let reportedRegion = region;
+
+  async function send() {
+    const base: Record<string, unknown> = {
+      model: opts.model,
+      max_tokens: opts.maxTokens ?? 600,
+      system: opts.system,
+      messages,
+      tools: opts.tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        input_schema: t.inputSchema,
+      })),
+    };
+    const attempt = async (geo: boolean) => {
+      const params = geo ? { ...base, inference_geo: region } : base;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (await client.messages.create(params as any)) as any;
+    };
+    if (!withGeo) return attempt(false);
+    try {
+      return await attempt(true);
+    } catch (e) {
+      try {
+        const res = await attempt(false);
+        withGeo = false;
+        reportedRegion = 'unpinned';
+        return res;
+      } catch {
+        throw e; // surface the original error, which names the real problem
+      }
+    }
+  }
+
+  let text = '';
+  for (let round = 0; round < maxRounds; round++) {
+    const res = await send();
+    if (res?.stop_reason === 'refusal') throw new Error('Claude declined this request.');
+
+    const blocks = (res.content ?? []) as Array<{
+      type: string;
+      text?: string;
+      id?: string;
+      name?: string;
+      input?: unknown;
+    }>;
+    text = blocks
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text ?? '')
+      .join('')
+      .trim();
+
+    const calls = blocks.filter((b) => b.type === 'tool_use' && b.name && b.id);
+    if (calls.length === 0) break;
+
+    messages.push({ role: 'assistant', content: res.content });
+    const results = [];
+    for (const call of calls) {
+      const input = (call.input ?? {}) as Record<string, unknown>;
+      let result: unknown;
+      try {
+        result = await opts.run({ name: call.name!, input });
+        used.push({ name: call.name!, input });
+      } catch (e) {
+        // A tool that fails is a fact GiGi should relay ("I couldn't reach the
+        // forecast"), not an error that loses the whole answer.
+        result = { error: String((e as Error)?.message ?? e).slice(0, 200) };
+      }
+      results.push({
+        type: 'tool_result',
+        tool_use_id: call.id,
+        content: JSON.stringify(result),
+      });
+    }
+    messages.push({ role: 'user', content: results });
+  }
+
+  return { text, used, region: reportedRegion };
+}

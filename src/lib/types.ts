@@ -102,7 +102,12 @@ export interface CalendarEvent {
   tzid?: string; // IANA tz for timed events
   rrule?: string; // reserved for recurrence (e.g. 'FREQ=WEEKLY;BYDAY=TU')
   alarmMinutesBefore?: number;
-  source: 'manual' | 'derived'; // derived = generated from bills/children
+  // manual  = somebody typed it in
+  // derived = generated from a bill or a child, and rebuilt every read
+  // google  = a read-only reflection of an event in a connected Google calendar
+  source: 'manual' | 'derived' | 'google';
+  /** The Google calendar an imported event came from. Only ever set for 'google'. */
+  externalCalendarId?: string;
   relatedChildId?: string;
   // The message this event was created from, e.g. 'gmail:<id>#0'. Checked
   // before creating, so re-scanning an inbox cannot duplicate what it found
@@ -120,6 +125,29 @@ export interface CalendarEvent {
 
 // A child profile (no login): used to associate school emails and travel/
 // passport nudges. Sensitive data — kept minimal (see docs/DECISIONS.md, DPIA).
+/**
+ * A calendar in a household's connected Google account.
+ *
+ * `selected` is off until the household ticks it: connecting an account must
+ * not silently import every calendar Google has attached to it. `category` is
+ * what GiGi treats the events AS — the digest ranks by category, and the
+ * household says which calendar is the school one rather than GiGi guessing
+ * from its name.
+ */
+export interface GoogleCalendar {
+  householdId: string;
+  calendarId: string;
+  summary: string;
+  timeZone?: string;
+  isPrimary: boolean;
+  backgroundColor?: string;
+  selected: boolean;
+  category: 'school' | 'travel' | 'appointment' | 'other';
+  lastSyncedAt?: string;
+  lastError?: string;
+  createdAt: string;
+}
+
 export interface Child {
   id: string;
   householdId: string;
@@ -305,6 +333,12 @@ export type ProcessingAction =
   | 'mailbox_read'
   | 'handover_changed'
   | 'calendar_shared'
+  // A connected Google calendar was read. Its own action rather than
+  // 'mailbox_read': a calendar is a different thing to a mailbox, held under a
+  // different scope, and the trust log must not blur the two.
+  | 'calendar_connected'
+  | 'calendar_imported'
+  | 'calendar_disconnected'
   | 'member_invited'
   | 'member_joined'
   | 'member_removed'

@@ -168,7 +168,7 @@ export default function GmailConnect({ next }: { next: string }) {
   if (!status) {
     return (
       <div className="card stack">
-        <h3>Connect Gmail</h3>
+        <h3>Connect Google</h3>
         <p className="small muted" style={{ margin: 0 }}>Checking…</p>
       </div>
     );
@@ -177,7 +177,7 @@ export default function GmailConnect({ next }: { next: string }) {
   return (
     <div className="card stack">
       <div className="row between">
-        <h3 style={{ margin: 0 }}>Connect Gmail</h3>
+        <h3 style={{ margin: 0 }}>Connect Google</h3>
         {status.connected ? (
           <span className="pill brand">● Connected</span>
         ) : status.configured ? (
@@ -238,13 +238,19 @@ export default function GmailConnect({ next }: { next: string }) {
       {status.configured && !status.connected && !status.hostMismatch && (
         <>
           <p className="small" style={{ margin: 0 }}>
-            Instead of forwarding each email, you can let GiGi look for bills itself.
-            <strong> Read-only</strong> — GiGi can never send, delete or change anything in your
-            inbox. Searching reads subject lines only. Importing a bill opens that one email and
-            its PDF invoice, and only ever when you press the button yourself.
+            Instead of forwarding each email, you can let GiGi look through your inbox itself — for
+            bills, and for anything else that needs you when you ask &ldquo;is there anything in my
+            mail?&rdquo; Connecting also lets you bring your Google <strong>calendar</strong> into
+            GiGi, so the household&apos;s week is genuinely in one place; you choose which calendars,
+            and none are included until you do.
+            <strong> Read-only, both of them</strong> — GiGi can never send, delete or change
+            anything in your inbox, and never add, move or delete anything in your calendar.
+            Searching mail reads senders and subject lines only, never a message. Importing a bill
+            opens that one email and its PDF invoice, and only ever when you press the button
+            yourself.
           </p>
           <button className="btn btn-primary btn-sm" onClick={connect}>
-            Connect Gmail →
+            Connect Google →
           </button>
           <p className="tiny muted" style={{ margin: 0 }}>
             Google will show an “unverified app” warning while GiGi is in beta. Your Gmail
